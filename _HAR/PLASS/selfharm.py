@@ -5,7 +5,6 @@ import time
 from threading import Thread
 import numpy as np
 import mmengine
-from mmengine.utils import track_iter_progress
 from mmaction.apis import (detection_inference, inference_skeleton, init_recognizer, pose_inference)
 from mmaction.registry import VISUALIZERS
 from mmaction.utils import frame_extract
