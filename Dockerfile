@@ -40,4 +40,5 @@ RUN mim install mmengine
 
 # Set the default command to run when the container starts
 WORKDIR /System_Integration
+RUN git clone https://github.com/DGU-PoliceLab/System_Integration.git
 CMD ["bash"]
