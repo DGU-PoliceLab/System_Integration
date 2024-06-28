@@ -114,7 +114,6 @@ class SocketProvider:
             'type': 'broadcast',
             'sender_id': self.__id,
             'data': data})
-        print(sys.getsizeof(buffer))
         self.__socket.send(buffer)
         
 class SocketConsumer:
