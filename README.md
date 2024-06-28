@@ -35,6 +35,11 @@
 본 시스템은 도커 환경을 권장합니다.
 [🐳 Dockerfile](https://github.com/DGU-PoliceLab/System_Integration/blob/main/Dockerfile)
 
+log 디렉토리등 디렉토리를 설정하고 가중치를 다운받기 위해 다음 명령어를 실행하세요.
+```bash
+bash setting.sh
+```
+
 ## 실행
 ```bash
 python run.py
