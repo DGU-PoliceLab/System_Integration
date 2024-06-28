@@ -12,7 +12,7 @@ from _Utils.logger import get_logger
 # from _Utils.socket_udp import get_sock, socket_consumer, socket_provider
 # from _Utils.socket_tcp import SocketConsumer
 
-LOGGER = get_logger(name="[PLASS]", console=False, file=True)
+LOGGER = get_logger(name="[PLASS]", console=True, file=True)
 
 def parse_args():
     parser = argparse.ArgumentParser(description='MMAction2 demo')

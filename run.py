@@ -41,7 +41,7 @@ DEBUG_MODE = True
 
 def main():
     # 출력 로그 설정
-    logger = get_logger(name= '[RUN]', console= False, file= True)
+    logger = get_logger(name= '[RUN]', console= True, file= True)
 
     # 루트 인자 및 기타 인자 설정
     args = get_root_args()
