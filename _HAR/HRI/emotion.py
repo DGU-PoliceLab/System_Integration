@@ -33,7 +33,7 @@ def  parse_args():
 def init_model():
     emotion_model = None
     emotion_model = MTNet(NUM_OF_EMOTION, num_race=6, num_sex=2).to(DEVICE)
-    emotion_model.load_state_dict(torch.load('/System_Integration/_HAR/HRI/models/model_state.pth', map_location=torch.device('cuda')))
+    emotion_model.load_state_dict(torch.load('/System_Integration/_HAR/HRI/Models/model_state.pth', map_location=torch.device('cuda')))
 
     emotion_model.eval()
     return emotion_model
@@ -53,7 +53,7 @@ def temp_preprocess(skeleton, bbox):
 
     return head_bbox
 
-def Emotion(input_queue, output_queue):
+def Emotion(pipe):
     args = parse_args()
 
     IMG_SIZE = 260    
@@ -75,8 +75,9 @@ def Emotion(input_queue, output_queue):
     emotion_model = init_model()
 
     while True:
-        if not input_queue.empty():
-            tracks, meta_data = input_queue.get()
+        data = pipe.recv()
+        if data:
+            tracks, meta_data = data
             tid_list = list()
             emotion_results = list()
             face_detections = meta_data['face_detections']
@@ -116,7 +117,6 @@ def Emotion(input_queue, output_queue):
                         fy2 = int(hbox[3])
 
                         face_img = frame[fy1:fy2, fx1:fx2, :]                    
-                        # cv2.imwrite(str(meta_data['num_frame'])+'_'+str(tid)+".png", face_img)
 
                         face_img_transformed = test_transforms(Image.fromarray(face_img).convert('RGB')).unsqueeze(0).to(DEVICE)
                         e_out, _, _ = emotion_model(face_img_transformed)

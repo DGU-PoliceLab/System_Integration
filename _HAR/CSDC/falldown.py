@@ -1,11 +1,7 @@
-import json
 import numpy as np
-import torch
-from queue import Queue
-from CSDC.ActionsEstLoader import TSSTG
 import time
-from multiprocessing import Process, Pipe
 import copy
+from CSDC.ActionsEstLoader import TSSTG
 from _Utils.logger import get_logger
 from collections import deque
 
@@ -31,15 +27,15 @@ def preprocess(skeletons): #임시 TODO!
 
     return np.array(skeletons)
 
-def Falldown(input_queue, output_queue):
+def Falldown(pipe):
     action_model = TSSTG()
-    # print(f"Falldown input_queue id: {id(input_queue)}")
-    # print(f"Falldown output_queue id: {id(output_queue)}")
+    # pipe.send(True)
     while True:
         action_name = 'None'
         confidence = 0
-        if not input_queue.empty():
-            tracks, meta_data = input_queue.get()
+        data = pipe.recv()
+        if data:
+            tracks, meta_data = data
             # tracks: tracker가 추적하는 데이터. HAR model의 input
             # meta_data: 현재 frame의 정보를 담고 있는 데이터. 카메라 정보, 해당 시점의 시간 정보 같은 HAR과 관련 없는 정보가 담김.
             
@@ -52,11 +48,9 @@ def Falldown(input_queue, output_queue):
                 tid = track.track_id
                 skeletons = preprocess(skeletons=skeletons)
 
-                out = action_model.predict(skeletons, image_size)
+                out = action_model.predict(skeletons, meta_data['frame_size'])
                 action_name = action_model.class_names[out[0].argmax()]
                 confidence = out[0].max()
-
-                # LOGGER.info(track)
 
             if check_falldown(action_name=action_name, confidence=confidence):
                 tid = 1
@@ -64,6 +58,7 @@ def Falldown(input_queue, output_queue):
                 # event_time = 0
                 # current_datetime = 0
                 # current_datetime = 0
+                LOGGER.info("action: falldown")
                 # output_queue.put(               
                 #     {'action': "falldown", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime']}                    
                 #     )
