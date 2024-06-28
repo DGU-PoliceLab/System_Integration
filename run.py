@@ -34,13 +34,21 @@ from _HAR.HRI.emotion import Emotion
 from variable import get_root_args, get_sort_args
 from rtmo import get_model
 
-TIME_ZONE = timezone('Asia/Seoul')
 DEBUG_MODE = True
 
-def main():
-    # 출력 로그 설정
-    logger = get_logger(name= '[RUN]', console= True, file= True)
+# 출력 로그 설정
+LOGGER = get_logger(name= '[RUN]', console= True, file= True)
 
+def wait_subprocess_ready(name, pipe):
+    while True:
+        LOGGER.info(f'wating for {name} process to ready...')
+        if pipe.recv():
+            LOGGER.info(f'{name} process ready')
+            break
+        else:
+            time.sleep(0.1)
+
+def main():
     # 루트 인자 및 기타 인자 설정
     args = get_root_args()
     dict_args = vars(args)
@@ -86,23 +94,23 @@ def main():
                 if dict_args['video_file'] != "":
                     cctv_info = get_cctv_info(conn)
             else:
-                logger.warning('RUN-CCTV Database connection is not open.')
+                LOGGER.warning('RUN-CCTV Database connection is not open.')
                 cctv_info = {'cctv_id': 404}
         except Exception as e:
-            logger.warning(f'Unable to connect to database, error: {e}')
+            LOGGER.warning(f'Unable to connect to database, error: {e}')
             cctv_info = {'cctv_id': 404}
 
         cctv_info = cctv_info[1]
         source = cctv_info['cctv_ip']
         Process(target=object_snapshot_control, args=(object_snapshot_control_queue,)).start()
     # CCTV 정보 출력
-    logger.info(f"cctv_info : {cctv_info}")
+    LOGGER.info(f"cctv_info : {cctv_info}")
 
     # 사람 감지 및 추적을 위한 모델 로드
     inferencer, init_args, call_args, display_alias = get_model()
 
     # 동영상 관련 설정
-    now = datetime.now(TIME_ZONE)
+    now = datetime.now()
     timestamp = str(now).replace(" ", "").replace(":",";")
     cap = cv2.VideoCapture(source)
     fourcc = cv2.VideoWriter_fourcc('m', 'p', 'v', '4')
@@ -114,24 +122,18 @@ def main():
         w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
     tracker = BoTSORT(bot_sort_args, fps)
-    
-    # 얼굴 감지 모델 로드
-    face_detector = face_detection.build_detector('RetinaNetResNet50', confidence_threshold=.5, nms_iou_threshold=.3)
 
     # _HAR 모듈 실행 대기
-    while True:
-        selfharm_ready = selfharm_input_pipe.recv()
-        if selfharm_ready:
-            break
-        else:
-            time.sleep(0.1)
+    wait_subprocess_ready("Selfharm", selfharm_input_pipe)
+    wait_subprocess_ready("Falldown", falldown_input_pipe)
+    wait_subprocess_ready("Emotion", emotion_input_pipe)
 
     # 사람 감지 및 추적
     if cap.isOpened():
         while True:
             ret, frame = cap.read()
             if ret:
-                current_datetime = datetime.now(TIME_ZONE)
+                current_datetime = datetime.now()
                 detections = []
                 skeletons = []
                 temp_call_args = copy.deepcopy(call_args)
@@ -140,7 +142,7 @@ def main():
                 for _ in inferencer(**temp_call_args):
                     pred = _['predictions'][0]
                     l_p = len(pred)
-                    logger.info(f'frame #{num_frame} pose_results- {l_p} person detect!')
+                    LOGGER.info(f'frame #{num_frame} pose_results- {l_p} person detect!')
                     n_person = 1
                     pred.sort(key = lambda x: x['bbox'][0][0])
 
@@ -163,14 +165,14 @@ def main():
                 # 모듈로 데이터 전송
                 # selfharm_input_pipe.send(input_data)
                 # falldown_input_pipe.send(input_data)
-                emotion_input_pipe.send(input_data)
+                emotion_input_pipe.send(frame)
             else:
                 selfharm_process.join()
                 falldown_process.join()
                 emotion_process.join()
                 break
     else:
-        logger.error('video error')
+        LOGGER.error('video error')
     out.release()
     cap.release()
 

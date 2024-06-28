@@ -7,7 +7,6 @@ from collections import OrderedDict
 def get_model_path(model_name):
     model_file=model_name+'.pth'
     curr_dict = os.getcwd()
-    print(curr_dict)
     cache_dir = os.path.join(curr_dict, 'models')
     os.makedirs(cache_dir, exist_ok=True)
     fpath=os.path.join(cache_dir,model_file)
@@ -19,9 +18,8 @@ class MTNet(nn.Module):
     def __init__(self, num_emotion, num_race = 6, num_sex=2):
         super().__init__()
         curr_dict = os.getcwd()
-        cache_dir = os.path.join(curr_dict, 'HRI/Models')
-        fpath = '_HAR/HRI/Models/enet_b2_7.pt'
-
+        cache_dir = os.path.join(curr_dict, 'Models')
+        fpath='/System_Integration/_HAR/HRI/Models/enet_b2_7.pt'
         self.base_net = torch.load(fpath)
         self.in_dim = self.base_net.classifier.in_features
         self.base_net.classifier = nn.Identity()

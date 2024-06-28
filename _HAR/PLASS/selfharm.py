@@ -5,9 +5,7 @@ import time
 from threading import Thread
 import numpy as np
 import mmengine
-from mmaction.apis import (detection_inference, inference_skeleton, init_recognizer, pose_inference)
-from mmaction.registry import VISUALIZERS
-from mmaction.utils import frame_extract
+from mmaction.apis import inference_skeleton, init_recognizer
 from _Utils.logger import get_logger
 
 LOGGER = get_logger(name="[PLASS]", console=True, file=True)

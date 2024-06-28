@@ -29,7 +29,7 @@ def preprocess(skeletons): #임시 TODO!
 
 def Falldown(pipe):
     action_model = TSSTG()
-    # pipe.send(True)
+    pipe.send(True)
     while True:
         action_name = 'None'
         confidence = 0
