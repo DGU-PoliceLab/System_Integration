@@ -10,9 +10,9 @@ from mmaction.registry import VISUALIZERS
 from mmaction.utils import frame_extract
 from _Utils.logger import get_logger
 # from _Utils.socket_udp import get_sock, socket_consumer, socket_provider
-from _Utils.socket_tcp import SocketConsumer
+# from _Utils.socket_tcp import SocketConsumer
 
-LOGGER = get_logger(name="[PLASS]", console=True, file=True)
+LOGGER = get_logger(name="[PLASS]", console=False, file=True)
 
 def parse_args():
     parser = argparse.ArgumentParser(description='MMAction2 demo')
@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument(
         '--device', type=str, default='cuda:0', help='CPU/CUDA device option')
     parser.add_argument(
-        '--step-size', type=int, default=10, help='inference step size')
+        '--step-size', type=int, default=15, help='inference step size')
     args = parser.parse_args()
     return args
 
@@ -67,7 +67,7 @@ def pre_processing(tracks):
 
 def inference(model, label_map, pose_data, meta_data):
     try:
-        result = inference_skeleton(model, pose_data, (meta_data['frame_size'][0], meta_data['frame_size'][1]))
+        result = inference_skeleton(model, pose_data, (meta_data[0]['frame_size'][0], meta_data[0]['frame_size'][1]))
         max_pred_index = result.pred_score.argmax().item()
         action_label = label_map[max_pred_index]
         LOGGER.info(f"action: {action_label}")
@@ -75,20 +75,20 @@ def inference(model, label_map, pose_data, meta_data):
     except Exception as e:
         LOGGER.error(f'Error occured in inference_thread, error: {e}')
 
-def Selfharm():
+def Selfharm(pipe):
     args = parse_args()
     config = mmengine.Config.fromfile(args.config)
     model = init_recognizer(config, args.checkpoint, args.device)
     label_map = [x.strip() for x in open(args.label_map).readlines()]
     # sock = get_sock(20001) # UDP option
-    socket_consumer = SocketConsumer() # TCP option
-    socket_consumer.start(20000) # TCP option
-
+    # socket_consumer = SocketConsumer() # TCP option
+    # socket_consumer.start(20000) # TCP option
     pose_array = []
     meta_array = []
+    prev_data = None
+
+    pipe.send(True)
     while True:
-        # data = socket_consumer(sock) # UDP option
-        data = socket_consumer.get()
         if len(pose_array) > args.step_size:
             pose_data = pose_array[:args.step_size]
             meta_data = meta_array[:args.step_size]
@@ -97,9 +97,12 @@ def Selfharm():
             infrence_thread = Thread(
                 target=inference, 
                 args=(model, label_map, pose_data, meta_data)).start()
-        if data:
+        # data = socket_consumer(sock) # UDP option
+        data = pipe.recv()
+        LOGGER.info(data)
+        if data and data != prev_data:
             tracks, meta_data = data
-            LOGGER.warning(meta_data['num_frame'])
+            prev_data = data
             pose_data = pre_processing(tracks)
             pose_array.append(pose_data)
             meta_array.append(meta_data)

@@ -10,7 +10,7 @@ ENV TORCH_NVCC_FLAGS="-Xfatbin -compress-all"
 RUN apt update
 RUN apt list --upgradable
 
-RUN apt install -y git vim libgl1-mesa-glx libglib2.0-0 ninja-build libsm6 libxrender-dev libxext6 libgl1-mesa-glx python-setuptools wget
+RUN apt install -y git vim libgl1-mesa-glx libglib2.0-0 ninja-build libsm6 libxrender-dev libxext6 libgl1-mesa-glx python-setuptools wget net-tools
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install ffmpeg
