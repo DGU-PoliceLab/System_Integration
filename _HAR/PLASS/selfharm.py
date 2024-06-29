@@ -14,15 +14,15 @@ def parse_args():
     parser = argparse.ArgumentParser(description='MMAction2 demo')
     parser.add_argument(
         '--config',
-        default="_HAR/PLASS/Models/config.py",
+        default="_HAR/PLASS/models/config.py",
         help='skeleton model config file path')
     parser.add_argument(
         '--checkpoint',
-        default="_HAR/PLASS/Models/checkpoint.pth",
+        default="_HAR/PLASS/models/checkpoint.pth",
         help='skeleton model checkpoint file/url')
     parser.add_argument(
         '--label-map',
-        default='_HAR/PLASS/Models/labelmap.txt',
+        default='_HAR/PLASS/models/labelmap.txt',
         help='label map file')
     parser.add_argument(
         '--device', type=str, default='cuda:0', help='CPU/CUDA device option')

@@ -13,7 +13,7 @@ LOGGER = get_logger(name="[HRI]", console=True, file=True)
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_state', type=str, default='_HAR/HRI/Models/model_state.pth', help='model state checkpoint path')
+    parser.add_argument('--model_state', type=str, default='_HAR/HRI/models/model_state.pth', help='model state checkpoint path')
     parser.add_argument('--face_detector', type=str, default='RetinaNetResNet50', help='DSFDDetector/RetinaNetResNet50')
     parser.add_argument(
         '--device', type=str, default='cuda', help='CPU/CUDA device option')

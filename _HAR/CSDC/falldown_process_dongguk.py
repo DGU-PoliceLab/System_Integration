@@ -105,7 +105,7 @@ def check_falldown(action_name='Normal', confidence=0):
     return False   
 
 def falldown_inference(falldown_queue, event_occurred_queue):
-    action_model_path = '/System_Integration/CSDC/Models/TSSTG/tsstg-model-best-1.pth'
+    action_model_path = '/System_Integration/CSDC/models/tsstg-model-best-1.pth'
     action_model = TSSTG(action_model_path)
 
     event_occur_dict = {}
