@@ -39,6 +39,7 @@ RUN mim install mmpose==1.3.1
 RUN mim install mmengine
 
 # Set the default command to run when the container starts
-WORKDIR /System_Integration
 RUN git clone https://github.com/DGU-PoliceLab/System_Integration.git
+WORKDIR /System_Integration
+RUN bash setting.sj
 CMD ["bash"]
