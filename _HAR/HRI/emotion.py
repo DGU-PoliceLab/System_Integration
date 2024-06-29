@@ -64,8 +64,5 @@ def Emotion(pipe):
                 print_most_common_label(emotions_list)
                 emotions_list = []
 
-    # 프로그램 종료 전에 리스트를 저장하거나 필요한 작업 수행
-    # save_emotions(emotions_list)
-
 if __name__ == '__main__':
     Emotion()

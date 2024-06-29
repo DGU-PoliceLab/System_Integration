@@ -163,8 +163,8 @@ def main():
                 input_data = [tracks, meta_data] # 모듈로 전달할 데이터
                 
                 # 모듈로 데이터 전송
-                # selfharm_input_pipe.send(input_data)
-                # falldown_input_pipe.send(input_data)
+                selfharm_input_pipe.send(input_data)
+                falldown_input_pipe.send(input_data)
                 emotion_input_pipe.send(frame)
             else:
                 selfharm_process.join()

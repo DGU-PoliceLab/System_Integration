@@ -66,8 +66,9 @@ def inference(model, label_map, pose_data, meta_data):
         result = inference_skeleton(model, pose_data, (meta_data[0]['frame_size']))
         max_pred_index = result.pred_score.argmax().item()
         action_label = label_map[max_pred_index]
-        LOGGER.info(f"action: {action_label}")
-        LOGGER.debug(result)
+        LOGGER.debug(f"action: {action_label}")
+        if action_label == 'selfharm':
+            LOGGER.info(f"selfharm detected! {meta_data[0]['current_datetime']}")
     except Exception as e:
         LOGGER.error(f'Error occured in inference_thread, error: {e}')
 
@@ -89,7 +90,7 @@ def Selfharm(pipe):
             meta_array = meta_array[args.step_size:]
             infrence_thread = Thread(
                 target=inference, 
-                args=(model, label_map, pose_data, meta_data)).start()
+                args=(model, label_map, pose_data, meta_data, pipe)).start()
         data = pipe.recv()
         if data and data != prev_data:
             tracks, meta_data = data
