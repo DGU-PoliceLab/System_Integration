@@ -41,5 +41,5 @@ RUN mim install mmengine
 # Set the default command to run when the container starts
 RUN git clone https://github.com/DGU-PoliceLab/System_Integration.git
 WORKDIR /System_Integration
-RUN bash setting.sj
+RUN bash setting.sh
 CMD ["bash"]
