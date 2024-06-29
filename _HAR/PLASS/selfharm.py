@@ -90,7 +90,7 @@ def Selfharm(pipe):
             meta_array = meta_array[args.step_size:]
             infrence_thread = Thread(
                 target=inference, 
-                args=(model, label_map, pose_data, meta_data, pipe)).start()
+                args=(model, label_map, pose_data, meta_data)).start()
         data = pipe.recv()
         if data and data != prev_data:
             tracks, meta_data = data

@@ -17,6 +17,7 @@ wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/EdjN
 wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/EfyxWktMAahMk-6wJ2RfpcoBE39nuIBp41WI0wUIthdd0Q?e=BxrvKa&download=1" -O ./_HAR/HRI/models/Resnet50_Final.pth
 wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/Eaa778hjqadBq_536FGvcJgBzOV5JbSRnz7bZRuidiKOXw?e=H4JNQD&download=1" -O ./_HAR/HRI/models/model_state.pth
 wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/EfItQVH89CpCiIUCuAXF9fkBdD55mgG-7yU7dp33kNkSqA?e=yPueyM&download=1" -O ./_HAR/HRI/models/enet_b2_7.pt
+cp /System_Integration/_HAR/HRI/models/Resnet50_Final.pth /root/.cache/torch/hub/checkpoints/
 
 # CSDC Checkpoints
 wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/Ea1MusgVUiZOtU4wVkgYW3ABZDiW8pEz4P5jNucZNbMA0Q?e=KYBlk0&download=1" -O ./_HAR/CSDC/models/tsstg-model-best-1.pth
