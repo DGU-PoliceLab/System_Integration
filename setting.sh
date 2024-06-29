@@ -20,6 +20,3 @@ wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/EfIt
 
 # CSDC Checkpoints
 wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/Ea1MusgVUiZOtU4wVkgYW3ABZDiW8pEz4P5jNucZNbMA0Q?e=KYBlk0&download=1" -O ./_HAR/CSDC/Models/TSSTG/tsstg-model-best-1.pth
-
-# Clean pycache
-find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf
