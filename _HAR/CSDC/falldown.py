@@ -5,7 +5,7 @@ from CSDC.ActionsEstLoader import TSSTG
 from _Utils.logger import get_logger
 from collections import deque
 
-LOGGER = get_logger(name="[CSDC]", console=False, file=False)
+LOGGER = get_logger(name="[CSDC]", console=True, file=True)
 
 FALLDOWN_THRESHHOLD = 0.60
 FRAME_STEP = 14
@@ -27,13 +27,13 @@ def preprocess(skeletons): #임시 TODO!
 
     return np.array(skeletons)
 
-def Falldown(pipe):
+def Falldown(data_pipe, event_pipe):
     action_model = TSSTG()
-    pipe.send(True)
+    data_pipe.send(True)
     while True:
         action_name = 'None'
         confidence = 0
-        data = pipe.recv()
+        data = data_pipe.recv()
         if data:
             tracks, meta_data = data
             # tracks: tracker가 추적하는 데이터. HAR model의 input
@@ -54,21 +54,7 @@ def Falldown(pipe):
 
             if check_falldown(action_name=action_name, confidence=confidence):
                 tid = 1
-                # event_date = 0
-                # event_time = 0
-                # current_datetime = 0
-                # current_datetime = 0
                 LOGGER.info("action: falldown")
-                # output_queue.put(               
-                #     {'action': "falldown", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime']}                    
-                #     )
-                event_date = copy.deepcopy(str(meta_data['current_datetime'])[:10]) # event_date 
-                event_time = copy.deepcopy(str(meta_data['current_datetime'])[11:19]) # event_time 
-                event_start_datetime = copy.deepcopy(str(meta_data['current_datetime'])[:19]) # event_start 
-                event_end_datetime = event_start_datetime
-                # output_queue.put((meta_data['cctv_id'], "falldown", meta_data['cctv_name'], tid, event_date, event_time, "Insert as soon as", event_start_datetime, event_end_datetime))
-                # print(f"output_queue.qsize: {output_queue.qsize()}")
-                # LOGGER.info("{}".format(meta_data['num_frame'])) # num_frame이 없어서 일단 주석했습니다.
-                LOGGER.info("낙상 발생")
+                event_pipe.send({'action': "falldown", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime']})
         else:
             time.sleep(0.0001)

@@ -16,6 +16,7 @@ from pytz import timezone
 from _Tracker.BoTSORT.tracker.bot_sort import BoTSORT
 from _DB.db_controller import connect_db, insert_event, insert_realtime
 from _DB.mq_controller import connect_mq
+from _DB.event_controller import collect_evnet
 from _DB.snapshot_controller import object_snapshot_control
 from _Utils.logger import get_logger
 from _Utils.concat_frame_to_video import save_vid_clip
@@ -66,20 +67,29 @@ def main():
     falldown_input_pipe, falldown_output_pipe = Pipe()
     emotion_input_pipe, emotion_output_pipe = Pipe()
 
+    # 이벤트 처리를 위한 수집을 위한 파이프라인 생성
+    event_input_pipe, event_output_pipe = Pipe()
+
     # 모듈별 프로세스 생성
-    selfharm_process = Process(target=Selfharm, args=(selfharm_output_pipe,))
-    falldown_process = Process(target=Falldown, args=(falldown_output_pipe,))
-    emotion_process = Process(target=Emotion, args=(emotion_output_pipe,))
+    selfharm_process = Process(target=Selfharm, args=(selfharm_output_pipe, event_input_pipe,))
+    falldown_process = Process(target=Falldown, args=(falldown_output_pipe, event_input_pipe,))
+    emotion_process = Process(target=Emotion, args=(emotion_output_pipe, event_input_pipe,))
     
+    # 이벤트 프로세스 생성
+    event_process = Process(target=collect_evnet, args=(event_output_pipe,))
+
     # 모듈별 프로세스 시작
     selfharm_process.start()
     falldown_process.start()
     emotion_process.start()
 
+    # 이벤트 프로세스 시작
+    event_process.start()
+
     # 디버그 모드
     if DEBUG_MODE == True:
         # DB 연결 및 CCTV 정보 조회
-        source = "_Input/videos/mhn_demo_2.mp4" 
+        source = "_Input/videos/mhn_demo_1.mp4" 
         mq_conn = None
         realtime_status_conn = None
         cctv_info = dict()
@@ -161,11 +171,12 @@ def main():
                 tracks = online_targets # 모듈로 전달할 감지 결과
                 meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['cctv_name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} # 모듈로 전달할 메타데이터
                 input_data = [tracks, meta_data] # 모듈로 전달할 데이터
+                e_input_data = [frame, meta_data]
                 
                 # 모듈로 데이터 전송
                 selfharm_input_pipe.send(input_data)
                 falldown_input_pipe.send(input_data)
-                emotion_input_pipe.send(frame)
+                emotion_input_pipe.send(e_input_data)
             else:
                 selfharm_process.join()
                 falldown_process.join()

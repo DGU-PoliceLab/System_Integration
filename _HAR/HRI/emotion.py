@@ -21,9 +21,11 @@ def parse_args():
     return args
 
 def print_most_common_label(emotions):
-    LOGGER.info(f"emotion Label: {Counter(emotions).most_common(1)[0][0]}")
+    common_label = Counter(emotions).most_common(1)[0][0]
+    LOGGER.info(f"emotion Label: {common_label}")
+    return common_label
 
-def Emotion(pipe):
+def Emotion(data_pipe, event_pipe):
     args = parse_args()
     test_transforms = transforms.Compose(
         [
@@ -43,9 +45,9 @@ def Emotion(pipe):
 
     emotions_list = []
     frame_rate = 30
-    pipe.send(True)
+    data_pipe.send(True)
     while True:
-        frame = pipe.recv()
+        frame, meta_data = data_pipe.recv()
         if frame is not None:
             detections = detector.detect(frame)
             for i in range(detections.shape[0]):
@@ -59,9 +61,9 @@ def Emotion(pipe):
                 e_out, i_out, _ = model(face_img2)
                 emotion = emotion_to_class[torch.argmax(e_out).item()]
                 emotions_list.append(emotion)
-            # 초당 프레임 수를 기준으로 1초 간격으로 감정 결과 출력
             if len(emotions_list) >= frame_rate:
-                print_most_common_label(emotions_list)
+                common_label = print_most_common_label(emotions_list)
+                event_pipe.send({'action': common_label, 'id':1, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime']})
                 emotions_list = []
 
 if __name__ == '__main__':

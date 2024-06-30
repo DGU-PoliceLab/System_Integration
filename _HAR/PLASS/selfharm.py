@@ -9,6 +9,7 @@ from mmaction.apis import inference_skeleton, init_recognizer
 from _Utils.logger import get_logger
 
 LOGGER = get_logger(name="[PLASS]", console=True, file=True)
+EVENT = None
 
 def parse_args():
     parser = argparse.ArgumentParser(description='MMAction2 demo')
@@ -61,7 +62,8 @@ def pre_processing(tracks):
     form['keypoints'] = np.array(form['keypoints'], dtype=np.float32)
     return form
 
-def inference(model, label_map, pose_data, meta_data):
+def inference(model, label_map, pose_data, meta_data, pipe):
+    global EVENT
     try:
         result = inference_skeleton(model, pose_data, (meta_data[0]['frame_size']))
         max_pred_index = result.pred_score.argmax().item()
@@ -69,10 +71,12 @@ def inference(model, label_map, pose_data, meta_data):
         LOGGER.debug(f"action: {action_label}")
         if action_label == 'selfharm':
             LOGGER.info(f"selfharm detected! {meta_data[0]['current_datetime']}")
+            pipe.send({'action': action_label, 'id': 1, 'cctv_id': meta_data[0]['cctv_id'], 'current_datetime': meta_data[0]['current_datetime']})
     except Exception as e:
         LOGGER.error(f'Error occured in inference_thread, error: {e}')
 
-def Selfharm(pipe):
+def Selfharm(data_pipe, event_pipe):
+    global EVENT
     args = parse_args()
     config = mmengine.Config.fromfile(args.config)
     model = init_recognizer(config, args.checkpoint, args.device)
@@ -81,7 +85,7 @@ def Selfharm(pipe):
     meta_array = []
     prev_data = None
 
-    pipe.send(True)
+    data_pipe.send(True)
     while True:
         if len(pose_array) > args.step_size:
             pose_data = pose_array[:args.step_size]
@@ -90,8 +94,8 @@ def Selfharm(pipe):
             meta_array = meta_array[args.step_size:]
             infrence_thread = Thread(
                 target=inference, 
-                args=(model, label_map, pose_data, meta_data)).start()
-        data = pipe.recv()
+                args=(model, label_map, pose_data, meta_data, event_pipe)).start()
+        data = data_pipe.recv()
         if data and data != prev_data:
             tracks, meta_data = data
             prev_data = data
