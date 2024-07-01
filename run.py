@@ -24,6 +24,7 @@ from _Utils.head_bbox import *
 from _Utils.pipeline import *
 from _Utils._time import process_time_check
 import _Utils.draw_bbox_skeleton as draw_bbox_skeleton 
+import _Utils.draw_result as draw_result
 import _MOT.face_detection as face_detection
 from _Sensor.radar import radar_start
 from _HAR.PLASS.selfharm import Selfharm
@@ -36,7 +37,7 @@ from rtmo import get_model
 DEBUG_MODE = True
 
 # 출력 로그 설정
-LOGGER = get_logger(name= '[RUN]', console= True, file= True)
+LOGGER = get_logger(name= '[RUN]', console= False, file= False)
 
 def wait_subprocess_ready(name, pipe):
     while True:
@@ -80,7 +81,7 @@ def main():
 
     # 모듈별 프로세스 시작
     # selfharm_process.start()
-    # falldown_process.start()
+    falldown_process.start()
     # emotion_process.start()
     # violence_process.start()
 
@@ -137,7 +138,7 @@ def main():
 
     # _HAR 모듈 실행 대기
     # wait_subprocess_ready("Selfharm", selfharm_input_pipe)
-    # wait_subprocess_ready("Falldown", falldown_input_pipe)
+    wait_subprocess_ready("Falldown", falldown_input_pipe)
     # wait_subprocess_ready("Emotion", emotion_input_pipe)
     # wait_subprocess_ready("Violence", violence_input_pipe)
 
@@ -174,13 +175,16 @@ def main():
             online_targets = tracker.update(detections, skeletons, frame)
             num_frame += 1
             tracks = online_targets # 모듈로 전달할 감지 결과
-            meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['cctv_name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} # 모듈로 전달할 메타데이터
+            if args.debug_visualize:
+                meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['cctv_name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame} # 모듈로 전달할 메타데이터
+            else:
+                meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['cctv_name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} # 모듈로 전달할 메타데이터
             input_data = [tracks, meta_data] # 모듈로 전달할 데이터
             e_input_data = [frame, meta_data]
             
             # 모듈로 데이터 전송
             # selfharm_input_pipe.send(input_data)
-            # falldown_input_pipe.send(input_data)
+            falldown_input_pipe.send(input_data)
             # emotion_input_pipe.send(e_input_data)
             # violence_input_pipe.send(input_data)
 

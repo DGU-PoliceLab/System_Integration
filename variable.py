@@ -1,7 +1,4 @@
 from argparse import ArgumentParser
-from _Utils.logger import get_logger
-
-LOGGER = get_logger(name = '[VARIABLE]')
 
 def get_arg(category = None, arg= None):
     if category == 'root':
@@ -15,9 +12,7 @@ def get_arg(category = None, arg= None):
         t = args[arg]
         return t
     except:
-        LOGGER.warning(f"'{arg}' does not exist in argument category {category}, category {category} : {args}")
-
-    
+        raise RuntimeError(f'Argument {arg} is not supported, (Supported argument: {args})')
 
 def get_root_args():
     parser = ArgumentParser()

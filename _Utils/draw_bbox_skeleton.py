@@ -54,7 +54,6 @@ def draw_keypoint_connection(frame, skeleton):
             cv2.line(frame, (x1, y1), (x2, y2), COLOR, THICK)
     return frame
 
-
 def define_keypoint(n):
     desc_keypoint = {}
     if n == 17:
