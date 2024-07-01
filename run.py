@@ -24,14 +24,12 @@ from _Utils.head_bbox import *
 from _Utils.pipeline import *
 from _Utils._time import process_time_check
 import _Utils.draw_bbox_skeleton as draw_bbox_skeleton 
-# from _Utils._port import kill_process
-# from _Utils.socket_udp import get_sock, socket_distributor, socket_collector, socket_provider
-# from _Utils.socket_tcp import socket_server_thread, SocketProvider, SocketConsumer
 import _MOT.face_detection as face_detection
 from _Sensor.radar import radar_start
 from _HAR.PLASS.selfharm import Selfharm
 from _HAR.CSDC.falldown import Falldown
 from _HAR.HRI.emotion import Emotion 
+from _HAR.MHNCITY.violence import Violence
 from variable import get_root_args, get_sort_args
 from rtmo import get_model
 
@@ -66,6 +64,7 @@ def main():
     selfharm_input_pipe, selfharm_output_pipe = Pipe()
     falldown_input_pipe, falldown_output_pipe = Pipe()
     emotion_input_pipe, emotion_output_pipe = Pipe()
+    violence_input_pipe, violence_output_pipe = Pipe()
 
     # 이벤트 처리를 위한 수집을 위한 파이프라인 생성
     event_input_pipe, event_output_pipe = Pipe()
@@ -74,14 +73,16 @@ def main():
     selfharm_process = Process(target=Selfharm, args=(selfharm_output_pipe, event_input_pipe,))
     falldown_process = Process(target=Falldown, args=(falldown_output_pipe, event_input_pipe,))
     emotion_process = Process(target=Emotion, args=(emotion_output_pipe, event_input_pipe,))
+    violence_process = Process(target=Violence, args=(violence_output_pipe, event_input_pipe,))
     
     # 이벤트 프로세스 생성
     event_process = Process(target=collect_evnet, args=(event_output_pipe,))
 
     # 모듈별 프로세스 시작
-    selfharm_process.start()
-    falldown_process.start()
-    emotion_process.start()
+    # selfharm_process.start()
+    # falldown_process.start()
+    # emotion_process.start()
+    violence_process.start()
 
     # 이벤트 프로세스 시작
     event_process.start()
@@ -90,8 +91,6 @@ def main():
     if DEBUG_MODE == True:
         # DB 연결 및 CCTV 정보 조회
         source = "_Input/videos/mhn_demo_1.mp4" 
-        mq_conn = None
-        realtime_status_conn = None
         cctv_info = dict()
         cctv_info['cctv_ip'] = -1
         cctv_info['cctv_id'] = -1
@@ -134,9 +133,10 @@ def main():
     tracker = BoTSORT(bot_sort_args, fps)
 
     # _HAR 모듈 실행 대기
-    wait_subprocess_ready("Selfharm", selfharm_input_pipe)
-    wait_subprocess_ready("Falldown", falldown_input_pipe)
-    wait_subprocess_ready("Emotion", emotion_input_pipe)
+    # wait_subprocess_ready("Selfharm", selfharm_input_pipe)
+    # wait_subprocess_ready("Falldown", falldown_input_pipe)
+    # wait_subprocess_ready("Emotion", emotion_input_pipe)
+    wait_subprocess_ready("Violence", violence_input_pipe)
 
     # 사람 감지 및 추적
     if cap.isOpened():
@@ -174,13 +174,11 @@ def main():
                 e_input_data = [frame, meta_data]
                 
                 # 모듈로 데이터 전송
-                selfharm_input_pipe.send(input_data)
-                falldown_input_pipe.send(input_data)
-                emotion_input_pipe.send(e_input_data)
+                # selfharm_input_pipe.send(input_data)
+                # falldown_input_pipe.send(input_data)
+                # emotion_input_pipe.send(e_input_data)
+                violence_input_pipe.send(input_data)
             else:
-                selfharm_process.join()
-                falldown_process.join()
-                emotion_process.join()
                 break
     else:
         LOGGER.error('video error')
