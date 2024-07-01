@@ -3,8 +3,7 @@ mkdir ./_Output
 mkdir ./_Output/log
 mkdir ./_PoseEstimation/mmlab/mmpose/checkpoints
 mkdir ./_HAR/HRI/models
-mkdir ./_HAR/CSDC/Models
-mkdir ./_HAR/CSDC/Models/TSSTG
+mkdir ./_HAR/CSDC/models
 
 # RTMO Checkpoints
 wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/EbTvNVxo52REgaFHwtfuJokB5wEMOdyHbHgebBxW7OMT-w?e=jHzCnf&download=1" -O ./_PoseEstimation/mmlab/mmpose/checkpoints/rtmo-l_16xb16-600e_body7-640x640-b37118ce_20231211.pth
