@@ -10,7 +10,7 @@ ENV TORCH_NVCC_FLAGS="-Xfatbin -compress-all"
 RUN apt update
 RUN apt list --upgradable
 
-RUN apt install -y git vim libgl1-mesa-glx libglib2.0-0 ninja-build libsm6 libxrender-dev libxext6 libgl1-mesa-glx python-setuptools wget net-tools
+RUN apt install -y git vim libgl1-mesa-glx libglib2.0-0 ninja-build libsm6 libxrender-dev libxext6 libgl1-mesa-glx python-setuptools wget net-tools zip unzip
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install ffmpeg
@@ -39,6 +39,7 @@ RUN mim install mmpose==1.3.1
 RUN mim install mmengine
 
 # Set the default command to run when the container starts
+WORKDIR /
 RUN git clone https://github.com/DGU-PoliceLab/System_Integration.git
 WORKDIR /System_Integration
 RUN bash setting.sh
