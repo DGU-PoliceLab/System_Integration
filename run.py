@@ -82,7 +82,7 @@ def main():
     # selfharm_process.start()
     # falldown_process.start()
     # emotion_process.start()
-    violence_process.start()
+    # violence_process.start()
 
     # 이벤트 프로세스 시작
     event_process.start()
@@ -122,9 +122,8 @@ def main():
     now = datetime.now()
     timestamp = str(now).replace(" ", "").replace(":",";")
     cap = cv2.VideoCapture(source)
-    fourcc = cv2.VideoWriter_fourcc('m', 'p', 'v', '4')
+    fourcc = cv2.VideoWriter_fourcc(*"DIVX")
     fps = 30
-    out = cv2.VideoWriter(f'/System_Integration/_Output/video_clip_{timestamp}.mp4', fourcc, fps, (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))) 
     num_frame = 0
     if cap.get(cv2.CAP_PROP_FPS):
         fps = cap.get(cv2.CAP_PROP_FPS)
@@ -132,58 +131,67 @@ def main():
         h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
     tracker = BoTSORT(bot_sort_args, fps)
 
+    # 디버그(시각화, 동영상 저장) 
+    if args.debug_visualize:    
+        out = cv2.VideoWriter(f'/System_Integration/_Output/video_clip_{timestamp}.avi', fourcc, fps, (int(w), int(h))) 
+
     # _HAR 모듈 실행 대기
     # wait_subprocess_ready("Selfharm", selfharm_input_pipe)
     # wait_subprocess_ready("Falldown", falldown_input_pipe)
     # wait_subprocess_ready("Emotion", emotion_input_pipe)
-    wait_subprocess_ready("Violence", violence_input_pipe)
+    # wait_subprocess_ready("Violence", violence_input_pipe)
 
     # 사람 감지 및 추적
-    if cap.isOpened():
-        while True:
-            ret, frame = cap.read()
-            if ret:
-                current_datetime = datetime.now()
-                detections = []
-                skeletons = []
-                temp_call_args = copy.deepcopy(call_args)
-                temp_call_args['inputs'] = frame         
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if ret:
+            draw_frame = frame.copy()
+            current_datetime = datetime.now()
+            detections = []
+            skeletons = []
+            temp_call_args = copy.deepcopy(call_args)
+            temp_call_args['inputs'] = frame         
 
-                for _ in inferencer(**temp_call_args):
-                    pred = _['predictions'][0]
-                    l_p = len(pred)
-                    LOGGER.info(f'frame #{num_frame} pose_results- {l_p} person detect!')
-                    n_person = 1
-                    pred.sort(key = lambda x: x['bbox'][0][0])
+            for _ in inferencer(**temp_call_args):
+                pred = _['predictions'][0]
+                l_p = len(pred)
+                LOGGER.info(f'frame #{num_frame} pose_results- {l_p} person detect!')
+                n_person = 1
+                pred.sort(key = lambda x: x['bbox'][0][0])
 
-                    for p in pred:
-                        keypoints = p['keypoints']
-                        keypoints_scores = p['keypoint_scores']
-                        detection = [*p['bbox'][0], p['bbox_score']]
-                        detections.append(detection)
-                        skeletons.append([a + [b] for a, b in zip(keypoints, keypoints_scores)])
-                        n_person += 1   
-                
-                detections = np.array(detections, dtype=np.float32)
-                skeletons = np.array(skeletons, dtype=np.float32)
-                online_targets = tracker.update(detections, skeletons, frame)
-                num_frame += 1
-                tracks = online_targets # 모듈로 전달할 감지 결과
-                meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['cctv_name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} # 모듈로 전달할 메타데이터
-                input_data = [tracks, meta_data] # 모듈로 전달할 데이터
-                e_input_data = [frame, meta_data]
-                
-                # 모듈로 데이터 전송
-                # selfharm_input_pipe.send(input_data)
-                # falldown_input_pipe.send(input_data)
-                # emotion_input_pipe.send(e_input_data)
-                violence_input_pipe.send(input_data)
-            else:
-                break
-    else:
-        LOGGER.error('video error')
-    out.release()
+                for p in pred:
+                    keypoints = p['keypoints']
+                    keypoints_scores = p['keypoint_scores']
+                    detection = [*p['bbox'][0], p['bbox_score']]
+                    detections.append(detection)
+                    skeletons.append([a + [b] for a, b in zip(keypoints, keypoints_scores)])
+                    if args.debug_visualize:
+                        draw_frame = draw_bbox_skeleton.draw(draw_frame, n_person, detection, keypoints)
+                    n_person += 1   
+            
+            detections = np.array(detections, dtype=np.float32)
+            skeletons = np.array(skeletons, dtype=np.float32)
+            online_targets = tracker.update(detections, skeletons, frame)
+            num_frame += 1
+            tracks = online_targets # 모듈로 전달할 감지 결과
+            meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['cctv_name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} # 모듈로 전달할 메타데이터
+            input_data = [tracks, meta_data] # 모듈로 전달할 데이터
+            e_input_data = [frame, meta_data]
+            
+            # 모듈로 데이터 전송
+            # selfharm_input_pipe.send(input_data)
+            # falldown_input_pipe.send(input_data)
+            # emotion_input_pipe.send(e_input_data)
+            # violence_input_pipe.send(input_data)
+
+            if args.debug_visualize:
+                out.write(draw_frame)
+        else:
+            break
+    if args.debug_visualize:
+        out.release()
     cap.release()
+    event_process.kill()
 
 if __name__ == '__main__':
     main()

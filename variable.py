@@ -81,6 +81,8 @@ def get_root_args():
         help='mmpose rtmo checkpoint')
     # Event Delay
     parser.add_argument('--event_delay', type=int, default=0, help='Event insert delay time')
+    # Debug
+    parser.add_argument('--debug_visualize', type=bool, default=True, help='Debug visualize')
 
     args = parser.parse_args()
     args.jde = False

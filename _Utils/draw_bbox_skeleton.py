@@ -13,8 +13,8 @@ def draw(frame, id, bbox, skeleton):
 def draw_bbox(frame, id, bbox):
     x1 = int(bbox[0])
     y1 = int(bbox[1])
-    x2 = int(bbox[0] + bbox[2])
-    y2 = int(bbox[1] + bbox[3])
+    x2 = int(bbox[2])
+    y2 = int(bbox[3])
     cv2.rectangle(frame, (x1, y1), (x2, y2), COLOR, THICK)
     frame = draw_id_box(frame, id, x1, y1)
     return frame
