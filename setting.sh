@@ -20,3 +20,5 @@ cp /System_Integration/_HAR/HRI/models/Resnet50_Final.pth /root/.cache/torch/hub
 
 # CSDC Checkpoints
 wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/Ea1MusgVUiZOtU4wVkgYW3ABZDiW8pEz4P5jNucZNbMA0Q?e=KYBlk0&download=1" -O ./_HAR/CSDC/models/tsstg-model-best-1.pth
+
+cp /System_Integration/_HAR/HRI/models/Resnet50_Final.pth /root/.cache/torch/hub/checkpoints/
