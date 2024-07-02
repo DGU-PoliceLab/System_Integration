@@ -5,39 +5,33 @@ sys.path.insert(0, "/System_Integration/_Tracker")
 sys.path.insert(0, "/System_Integration/_HAR")
 sys.path.insert(0, "/System_Integration/_MOT")
 import copy
-from threading import Thread
 from multiprocessing import Process, Queue, Pipe
 import cv2
 import torch
 import numpy as np
 import time
 from datetime import datetime
-from pytz import timezone
 from _Tracker.BoTSORT.tracker.bot_sort import BoTSORT
 from _DB.db_controller import connect_db, insert_event, insert_realtime
 from _DB.mq_controller import connect_mq
 from _DB.event_controller import collect_evnet
 from _DB.snapshot_controller import object_snapshot_control
 from _Utils.logger import get_logger
-from _Utils.concat_frame_to_video import save_vid_clip
 from _Utils.head_bbox import *
 from _Utils.pipeline import *
-from _Utils._time import process_time_check
 import _Utils.draw_bbox_skeleton as draw_bbox_skeleton 
-import _Utils.draw_result as draw_result
-import _MOT.face_detection as face_detection
 from _Sensor.radar import radar_start
 from _HAR.PLASS.selfharm import Selfharm
 from _HAR.CSDC.falldown import Falldown
 from _HAR.HRI.emotion import Emotion 
 from _HAR.MHNCITY.violence import Violence
-from variable import get_root_args, get_sort_args
+from variable import get_root_args, get_sort_args, get_debug_args
 from rtmo import get_model
 
 DEBUG_MODE = True
 
 # 출력 로그 설정
-LOGGER = get_logger(name= '[RUN]', console= False, file= False)
+LOGGER = get_logger(name= '[RUN]', console= True, file= False)
 
 def wait_subprocess_ready(name, pipe):
     while True:
@@ -55,6 +49,7 @@ def main():
     bot_sort_args = get_sort_args()
     bot_sort_args.ablation = False
     bot_sort_args.mot20 = not bot_sort_args.fuse_score
+    debug_args = get_debug_args()
 
     # 멀티프로세스 환경 torch, cuda 설정
     torch.multiprocessing.set_start_method('spawn')
@@ -80,7 +75,7 @@ def main():
     event_process = Process(target=collect_evnet, args=(event_output_pipe,))
 
     # 모듈별 프로세스 시작
-    # selfharm_process.start()
+    selfharm_process.start()
     falldown_process.start()
     # emotion_process.start()
     # violence_process.start()
@@ -133,11 +128,11 @@ def main():
     tracker = BoTSORT(bot_sort_args, fps)
 
     # 디버그(시각화, 동영상 저장) 
-    if args.debug_visualize:    
+    if debug_args.visualize:    
         out = cv2.VideoWriter(f'/System_Integration/_Output/video_clip_{timestamp}.avi', fourcc, fps, (int(w), int(h))) 
 
     # _HAR 모듈 실행 대기
-    # wait_subprocess_ready("Selfharm", selfharm_input_pipe)
+    wait_subprocess_ready("Selfharm", selfharm_input_pipe)
     wait_subprocess_ready("Falldown", falldown_input_pipe)
     # wait_subprocess_ready("Emotion", emotion_input_pipe)
     # wait_subprocess_ready("Violence", violence_input_pipe)
@@ -166,7 +161,7 @@ def main():
                     detection = [*p['bbox'][0], p['bbox_score']]
                     detections.append(detection)
                     skeletons.append([a + [b] for a, b in zip(keypoints, keypoints_scores)])
-                    if args.debug_visualize:
+                    if debug_args.visualize:
                         draw_frame = draw_bbox_skeleton.draw(draw_frame, n_person, detection, keypoints)
                     n_person += 1   
             
@@ -175,7 +170,7 @@ def main():
             online_targets = tracker.update(detections, skeletons, frame)
             num_frame += 1
             tracks = online_targets # 모듈로 전달할 감지 결과
-            if args.debug_visualize:
+            if debug_args.visualize:
                 meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['cctv_name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame} # 모듈로 전달할 메타데이터
             else:
                 meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['cctv_name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} # 모듈로 전달할 메타데이터
@@ -183,16 +178,16 @@ def main():
             e_input_data = [frame, meta_data]
             
             # 모듈로 데이터 전송
-            # selfharm_input_pipe.send(input_data)
+            selfharm_input_pipe.send(input_data)
             falldown_input_pipe.send(input_data)
             # emotion_input_pipe.send(e_input_data)
             # violence_input_pipe.send(input_data)
 
-            if args.debug_visualize:
+            if debug_args.visualize:
                 out.write(draw_frame)
         else:
             break
-    if args.debug_visualize:
+    if debug_args.visualize:
         out.release()
     cap.release()
     event_process.kill()

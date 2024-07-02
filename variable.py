@@ -5,6 +5,8 @@ def get_arg(category = None, arg= None):
         args = get_root_args()
     elif category == 'sort':
         args = get_sort_args()
+    elif category == 'debug':
+        args = get_debug_args()
     else:
         raise RuntimeError(f'Category{category} is not supported, (Supported category: {category})')
     args = vars(args)
@@ -84,6 +86,14 @@ def get_root_args():
     args.ablation = False
     return args
 
+def get_debug_args():
+    parser = ArgumentParser("DEBUG")
+    parser.add_argument("--debug", type=bool, default=False)
+    parser.add_argument("--visualize", type=bool, default=True)
+    args = parser.parse_args()
+    return args
+
+
 def get_sort_args():
     parser = ArgumentParser("BoT-SORT")
     parser.add_argument("--demo", default="image", help="demo type, eg. image, video and webcam")
@@ -119,5 +129,5 @@ def get_sort_args():
     parser.add_argument("--fast-reid-weights", dest="fast_reid_weights", default="_Tracker/BoTSORT/fast_reid/checkpoints/MOT17/mot17_sbs_S50.pth", type=str,help="reid config file path")
     parser.add_argument('--proximity_thresh', type=float, default=0.5, help='threshold for rejecting low overlap reid matches')
     parser.add_argument('--appearance_thresh', type=float, default=0.25, help='threshold for rejecting low appearance similarity reid matches')
-    sort_args = parser.parse_args()
-    return sort_args
+    args = parser.parse_args()
+    return args
