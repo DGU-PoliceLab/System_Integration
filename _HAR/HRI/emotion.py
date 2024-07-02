@@ -8,17 +8,9 @@ from PIL import Image
 import argparse
 from collections import Counter
 from _Utils.logger import get_logger
+from variable import get_emotion_args, get_debug_args
 
 LOGGER = get_logger(name="[HRI]", console=True, file=True)
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--model_state', type=str, default='_HAR/HRI/models/model_state.pth', help='model state checkpoint path')
-    parser.add_argument('--face_detector', type=str, default='RetinaNetResNet50', help='DSFDDetector/RetinaNetResNet50')
-    parser.add_argument(
-        '--device', type=str, default='cuda', help='CPU/CUDA device option')
-    args = parser.parse_args()
-    return args
 
 def print_most_common_label(emotions):
     common_label = Counter(emotions).most_common(1)[0][0]
@@ -26,7 +18,8 @@ def print_most_common_label(emotions):
     return common_label
 
 def Emotion(data_pipe, event_pipe):
-    args = parse_args()
+    args = get_emotion_args()
+    debug_args = get_debug_args()
     test_transforms = transforms.Compose(
         [
             transforms.Resize((260,260)),

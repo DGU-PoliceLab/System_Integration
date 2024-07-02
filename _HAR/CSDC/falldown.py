@@ -6,16 +6,9 @@ from CSDC.ActionsEstLoader import TSSTG
 from multiprocessing import Process, Pipe
 from _Utils.logger import get_logger
 from _Utils._visualize import visualize
-from variable import get_debug_args
+from variable import get_falldown_args, get_debug_args
 
 LOGGER = get_logger(name="[CSDC]", console=True, file=False)
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--threshhold', type=float, default=0.6, help='falldown threshhold')
-    parser.add_argument('--frame_step', type=int, default=14, help='inference frame step')
-    args = parser.parse_args()
-    return args
 
 def preprocess(skeletons, frame_step):
     skeletons = deque(skeletons, maxlen=frame_step)
@@ -33,7 +26,7 @@ def check_falldown(action_name='Normal', confidence=0, threshold=0.6):
     return False   
 
 def Falldown(data_pipe, event_pipe):
-    args = parse_args()
+    args = get_falldown_args()
     debug_args = get_debug_args()
     if debug_args.visualize:
         frame_pipe, frame_pipe_child = Pipe()

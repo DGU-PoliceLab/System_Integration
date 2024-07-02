@@ -9,31 +9,10 @@ from mmaction.apis import inference_skeleton, init_recognizer
 from multiprocessing import Process, Pipe
 from _Utils.logger import get_logger
 from _Utils._visualize import visualize
-from variable import get_debug_args
+from variable import get_selfharm_args, get_debug_args
 
 LOGGER = get_logger(name="[PLASS]", console=True, file=False)
 EVENT = ["normla", 0.0]
-
-def parse_args():
-    parser = argparse.ArgumentParser(description='MMAction2 demo')
-    parser.add_argument(
-        '--config',
-        default="_HAR/PLASS/models/config.py",
-        help='skeleton model config file path')
-    parser.add_argument(
-        '--checkpoint',
-        default="_HAR/PLASS/models/checkpoint.pth",
-        help='skeleton model checkpoint file/url')
-    parser.add_argument(
-        '--label-map',
-        default='_HAR/PLASS/models/labelmap.txt',
-        help='label map file')
-    parser.add_argument(
-        '--device', type=str, default='cuda:0', help='CPU/CUDA device option')
-    parser.add_argument(
-        '--step-size', type=int, default=15, help='inference step size')
-    args = parser.parse_args()
-    return args
 
 def pre_processing(tracks):
     form = {
@@ -82,7 +61,7 @@ def inference(model, label_map, pose_data, meta_data, pipe):
 
 def Selfharm(data_pipe, event_pipe):
     global EVENT
-    args = parse_args()
+    args = get_selfharm_args()
     debug_args = get_debug_args()
     if debug_args.visualize:
         frame_pipe, frame_pipe_child = Pipe()

@@ -86,14 +86,6 @@ def get_root_args():
     args.ablation = False
     return args
 
-def get_debug_args():
-    parser = ArgumentParser("DEBUG")
-    parser.add_argument("--debug", type=bool, default=False)
-    parser.add_argument("--visualize", type=bool, default=True)
-    args = parser.parse_args()
-    return args
-
-
 def get_sort_args():
     parser = ArgumentParser("BoT-SORT")
     parser.add_argument("--demo", default="image", help="demo type, eg. image, video and webcam")
@@ -129,5 +121,49 @@ def get_sort_args():
     parser.add_argument("--fast-reid-weights", dest="fast_reid_weights", default="_Tracker/BoTSORT/fast_reid/checkpoints/MOT17/mot17_sbs_S50.pth", type=str,help="reid config file path")
     parser.add_argument('--proximity_thresh', type=float, default=0.5, help='threshold for rejecting low overlap reid matches')
     parser.add_argument('--appearance_thresh', type=float, default=0.25, help='threshold for rejecting low appearance similarity reid matches')
+    args = parser.parse_args()
+    return args
+
+def get_debug_args():
+    parser = ArgumentParser("DEBUG")
+    parser.add_argument("--debug", type=bool, default=False)
+    parser.add_argument("--visualize", type=bool, default=True)
+    args = parser.parse_args()
+    return args
+
+def get_falldown_args():
+    parser = ArgumentParser(description="Falldown")
+    parser.add_argument('--threshhold', type=float, default=0.6, help='falldown threshhold')
+    parser.add_argument('--frame_step', type=int, default=14, help='inference frame step')
+    args = parser.parse_args()
+    return args
+
+def get_selfharm_args():
+    parser = ArgumentParser(description='Selfharm')
+    parser.add_argument(
+        '--config',
+        default="_HAR/PLASS/models/config.py",
+        help='skeleton model config file path')
+    parser.add_argument(
+        '--checkpoint',
+        default="_HAR/PLASS/models/checkpoint.pth",
+        help='skeleton model checkpoint file/url')
+    parser.add_argument(
+        '--label-map',
+        default='_HAR/PLASS/models/labelmap.txt',
+        help='label map file')
+    parser.add_argument(
+        '--device', type=str, default='cuda:0', help='CPU/CUDA device option')
+    parser.add_argument(
+        '--step-size', type=int, default=15, help='inference step size')
+    args = parser.parse_args()
+    return args
+
+def get_emotion_args():
+    parser = ArgumentParser(description="Emotion")
+    parser.add_argument('--model_state', type=str, default='_HAR/HRI/models/model_state.pth', help='model state checkpoint path')
+    parser.add_argument('--face_detector', type=str, default='RetinaNetResNet50', help='DSFDDetector/RetinaNetResNet50')
+    parser.add_argument(
+        '--device', type=str, default='cuda', help='CPU/CUDA device option')
     args = parser.parse_args()
     return args
