@@ -18,6 +18,7 @@ def get_arg(category = None, arg= None):
 
 def get_root_args():
     parser = ArgumentParser()
+    parser.add_argument('--modules', type=list, default=["longterm"],help='running modules')
     parser.add_argument('--test', type=str, default='test',help='test')
     parser.add_argument('--nas_path', type=str, default= "/System_Integration/_Output/NAS", help='NAS path'),
     parser.add_argument('--img-size', type=int, default=1080, help='inference size (pixels)') # 480 -> 1080 수정완료.
@@ -78,8 +79,6 @@ def get_root_args():
         help='mmpose rtmo checkpoint')
     # Event Delay
     parser.add_argument('--event_delay', type=int, default=0, help='Event insert delay time')
-    # Debug
-    parser.add_argument('--debug_visualize', type=bool, default=True, help='Debug visualize')
 
     args = parser.parse_args()
     args.jde = False
@@ -126,8 +125,8 @@ def get_sort_args():
 
 def get_debug_args():
     parser = ArgumentParser("DEBUG")
-    parser.add_argument("--debug", type=bool, default=False)
-    parser.add_argument("--visualize", type=bool, default=True)
+    parser.add_argument("--debug", type=bool, default=True)
+    parser.add_argument("--visualize", type=bool, default=False)
     args = parser.parse_args()
     return args
 

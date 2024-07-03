@@ -25,10 +25,9 @@ from _HAR.PLASS.selfharm import Selfharm
 from _HAR.CSDC.falldown import Falldown
 from _HAR.HRI.emotion import Emotion
 from _HAR.MHNCITY.violence.violence import Violence
+from _HAR.MHNCITY.longterm.longterm import Longterm
 from variable import get_root_args, get_sort_args, get_debug_args
 from rtmo import get_model
-
-DEBUG_MODE = True
 
 # 출력 로그 설정
 LOGGER = get_logger(name= '[RUN]', console= True, file= False)
@@ -57,37 +56,46 @@ def main():
     object_snapshot_control_queue = Queue()
     
     # 프로세스간 데이터 전달을 위한 파이프라인 생성
-    selfharm_input_pipe, selfharm_output_pipe = Pipe()
-    falldown_input_pipe, falldown_output_pipe = Pipe()
-    emotion_input_pipe, emotion_output_pipe = Pipe()
-    violence_input_pipe, violence_output_pipe = Pipe()
+    if 'selfharm' in args.modules:
+        selfharm_input_pipe, selfharm_output_pipe = Pipe()
+    if 'falldown' in args.modules:
+        falldown_input_pipe, falldown_output_pipe = Pipe()
+    if 'emotion' in args.modules:
+        emotion_input_pipe, emotion_output_pipe = Pipe()
+    if 'violence' in args.modules:
+        violence_input_pipe, violence_output_pipe = Pipe()
+    if 'longterm' in args.modules:
+        longterm_input_pipe, longterm_output_pipe = Pipe()
 
     # 이벤트 처리를 위한 수집을 위한 파이프라인 생성
     event_input_pipe, event_output_pipe = Pipe()
 
-    # 모듈별 프로세스 생성
-    selfharm_process = Process(target=Selfharm, args=(selfharm_output_pipe, event_input_pipe,))
-    falldown_process = Process(target=Falldown, args=(falldown_output_pipe, event_input_pipe,))
-    emotion_process = Process(target=Emotion, args=(emotion_output_pipe, event_input_pipe,))
-    violence_process = Process(target=Violence, args=(violence_output_pipe, event_input_pipe,))
-    
-    # 이벤트 프로세스 생성
+    # 이벤트 프로세스
     event_process = Process(target=collect_evnet, args=(event_output_pipe,))
-
-    # 모듈별 프로세스 시작
-    # selfharm_process.start()
-    # falldown_process.start()
-    # emotion_process.start()
-    violence_process.start()
-
-    # 이벤트 프로세스 시작
     event_process.start()
 
+    # 모듈별 프로세스
+    if 'selfharm' in args.modules:
+        selfharm_process = Process(target=Selfharm, args=(selfharm_output_pipe, event_input_pipe,))
+        selfharm_process.start()
+    if 'falldown' in args.modules:
+        falldown_process = Process(target=Falldown, args=(falldown_output_pipe, event_input_pipe,))
+        falldown_process.start()
+    if 'emotion' in args.modules:
+        emotion_process = Process(target=Emotion, args=(emotion_output_pipe, event_input_pipe,))
+        emotion_process.start()
+    if 'violence' in args.modules:
+        violence_process = Process(target=Violence, args=(violence_output_pipe, event_input_pipe,))
+        violence_process.start()
+    if 'longterm' in args.modules:
+        longterm_process = Process(target=Longterm, args=(longterm_output_pipe, event_input_pipe,))
+        longterm_process.start()
+
     # 디버그 모드
-    if DEBUG_MODE == True:
+    if debug_args.debug == True:
         # DB 연결 및 CCTV 정보 조회
         # source = "_Input/videos/mhn_demo_1.mp4" 
-        source = "_Input/videos/mhn_demo_1.mp4" 
+        source = "_Input/videos/long_term_test_2.mp4" 
         cctv_info = dict()
         cctv_info['cctv_ip'] = -1
         cctv_info['cctv_id'] = -1
@@ -133,10 +141,16 @@ def main():
         out = cv2.VideoWriter(f'/System_Integration/_Output/video_clip_{timestamp}.avi', fourcc, fps, (int(w), int(h))) 
 
     # _HAR 모듈 실행 대기
-    # wait_subprocess_ready("Selfharm", selfharm_input_pipe)
-    # wait_subprocess_ready("Falldown", falldown_input_pipe)
-    # wait_subprocess_ready("Emotion", emotion_input_pipe)
-    wait_subprocess_ready("Violence", violence_input_pipe)
+    if 'selfharm' in args.modules:
+        wait_subprocess_ready("Selfharm", selfharm_input_pipe)
+    if 'falldown' in args.modules:
+        wait_subprocess_ready("Falldown", falldown_input_pipe)
+    if 'emotion' in args.modules:
+        wait_subprocess_ready("Emotion", emotion_input_pipe)
+    if 'violence' in args.modules:
+        wait_subprocess_ready("Violence", violence_input_pipe)
+    if 'longterm' in args.modules:
+        wait_subprocess_ready("Longterm", longterm_input_pipe)
 
     # 사람 감지 및 추적
     while cap.isOpened():
@@ -179,10 +193,16 @@ def main():
             e_input_data = [frame, meta_data]
             
             # 모듈로 데이터 전송
-            # selfharm_input_pipe.send(input_data)
-            # falldown_input_pipe.send(input_data)
-            # emotion_input_pipe.send(e_input_data)
-            violence_input_pipe.send(input_data)
+            if 'selfharm' in args.modules:
+                selfharm_input_pipe.send(input_data)
+            if 'falldown' in args.modules:
+                falldown_input_pipe.send(input_data)
+            if 'emotion' in args.modules:
+                emotion_input_pipe.send(e_input_data)
+            if 'violence' in args.modules:
+                violence_input_pipe.send(input_data)
+            if 'longterm' in args.modules:
+                longterm_input_pipe.send(input_data)
 
             if debug_args.visualize:
                 out.write(draw_frame)
