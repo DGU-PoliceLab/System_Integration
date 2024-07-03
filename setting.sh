@@ -4,6 +4,7 @@ mkdir ./_Output/log
 mkdir ./_PoseEstimation/mmlab/mmpose/checkpoints
 mkdir ./_HAR/HRI/models
 mkdir ./_HAR/CSDC/models
+mkdir ./_HAR/MHNCITY/violence/models
 
 # RTMO Checkpoints
 wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/EbTvNVxo52REgaFHwtfuJokB5wEMOdyHbHgebBxW7OMT-w?e=jHzCnf&download=1" -O ./_PoseEstimation/mmlab/mmpose/checkpoints/rtmo-l_16xb16-600e_body7-640x640-b37118ce_20231211.pth
@@ -20,5 +21,10 @@ cp /System_Integration/_HAR/HRI/models/Resnet50_Final.pth /root/.cache/torch/hub
 
 # CSDC Checkpoints
 wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/Ea1MusgVUiZOtU4wVkgYW3ABZDiW8pEz4P5jNucZNbMA0Q?e=KYBlk0&download=1" -O ./_HAR/CSDC/models/tsstg-model-best-1.pth
+
+# MHNCITY Checkpoints
+# Violence Checkpoints
+wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/EdycWfDGFFxFtmfh6JY2RSQB6itLa6oiTwhdzc7LKS6IfQ?e=t4IdOA&download=1" -O ./_HAR/MHNCITY/violence/models/model_epoch_270.pth
+wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/EWUhkGsQp2FBrNtxXQ-hyAcBVoobHOIKK3RrlAkGzBkZxg?e=z6TAfr&download=1" -O ./_HAR/MHNCITY/violence/models/model_epoch_397.pth
 
 cp /System_Integration/_HAR/HRI/models/Resnet50_Final.pth /root/.cache/torch/hub/checkpoints/
