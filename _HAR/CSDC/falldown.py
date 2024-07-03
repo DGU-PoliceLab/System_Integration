@@ -43,6 +43,7 @@ def Falldown(data_pipe, event_pipe):
             tracks, meta_data = data
             for i, track in enumerate(tracks):
                 skeletons = track.skeletons
+                print(skeletons)
                 if len(skeletons) < args.frame_step:
                     continue
 
