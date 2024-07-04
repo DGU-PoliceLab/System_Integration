@@ -10,14 +10,13 @@ from collections import Counter
 from _Utils.logger import get_logger
 from variable import get_emotion_args, get_debug_args
 
-LOGGER = get_logger(name="[HRI]", console=True, file=True)
-
-def print_most_common_label(emotions):
+def print_most_common_label(emotions, logger):
     common_label = Counter(emotions).most_common(1)[0][0]
-    LOGGER.info(f"emotion Label: {common_label}")
+    logger.info(f"emotion Label: {common_label}")
     return common_label
 
 def Emotion(data_pipe, event_pipe):
+    logger = get_logger(name="[HRI]", console=True, file=True)
     args = get_emotion_args()
     debug_args = get_debug_args()
     test_transforms = transforms.Compose(
@@ -55,7 +54,7 @@ def Emotion(data_pipe, event_pipe):
                 emotion = emotion_to_class[torch.argmax(e_out).item()]
                 emotions_list.append(emotion)
             if len(emotions_list) >= frame_rate:
-                common_label = print_most_common_label(emotions_list)
+                common_label = print_most_common_label(emotions_list, logger)
                 event_pipe.send({'action': common_label, 'id':1, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime']})
                 emotions_list = []
 

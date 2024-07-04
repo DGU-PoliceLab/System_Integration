@@ -94,8 +94,8 @@ def main():
     # 디버그 모드
     if debug_args.debug == True:
         # DB 연결 및 CCTV 정보 조회
-        # source = "_Input/videos/mhn_demo_1.mp4" 
-        source = "_Input/videos/long_term_test_2.mp4" 
+        source = "_Input/videos/mhn_demo_1.mp4" 
+        # source = "_Input/videos/long_term_test_2.mp4" 
         cctv_info = dict()
         cctv_info['cctv_ip'] = -1
         cctv_info['cctv_id'] = -1
@@ -127,7 +127,7 @@ def main():
     now = datetime.now()
     timestamp = str(now).replace(" ", "").replace(":",";")
     cap = cv2.VideoCapture(source)
-    fourcc = cv2.VideoWriter_fourcc(*"DIVX")
+    fourcc = cv2.VideoWriter_fourcc('M','P', '4', 'V')
     fps = 30
     num_frame = 0
     if cap.get(cv2.CAP_PROP_FPS):
@@ -138,7 +138,7 @@ def main():
 
     # 디버그(시각화, 동영상 저장) 
     if debug_args.visualize:    
-        out = cv2.VideoWriter(f'/System_Integration/_Output/video_clip_{timestamp}.avi', fourcc, fps, (int(w), int(h))) 
+        out = cv2.VideoWriter(f'/System_Integration/_Output/video_clip_{timestamp}.mp4', fourcc, fps, (int(w), int(h))) 
 
     # _HAR 모듈 실행 대기
     if 'selfharm' in args.modules:

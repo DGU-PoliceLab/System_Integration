@@ -8,8 +8,6 @@ from _Utils.logger import get_logger
 from _Utils._visualize import visualize
 from variable import get_falldown_args, get_debug_args
 
-LOGGER = get_logger(name="[CSDC]", console=True, file=False)
-
 def preprocess(skeletons, frame_step):
     skeletons = deque(skeletons, maxlen=frame_step)
     for i, sk in enumerate(skeletons):
@@ -26,6 +24,7 @@ def check_falldown(action_name='Normal', confidence=0, threshold=0.6):
     return False   
 
 def Falldown(data_pipe, event_pipe):
+    logger = get_logger(name="[CSDC]", console=True, file=True)
     args = get_falldown_args()
     debug_args = get_debug_args()
     if debug_args.visualize:
@@ -56,7 +55,7 @@ def Falldown(data_pipe, event_pipe):
             
             if check_falldown(action_name=action_name, confidence=confidence, threshold=args.threshhold):
                 tid = 1
-                LOGGER.info("action: falldown")
+                logger.info("action: falldown")
                 event_pipe.send({'action': "falldown", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime']})
             if debug_args.visualize:
                 frame_pipe.send([meta_data['frame'], action_name, confidence])

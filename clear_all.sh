@@ -1,5 +1,5 @@
 # Clean pycache
-find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf
+# find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf
 
 # Clean logs
 rm -rf ./_Output/log/*.log

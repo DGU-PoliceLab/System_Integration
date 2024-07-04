@@ -5,8 +5,6 @@ import numpy as np
 import time
 from _Utils.logger import get_logger
 
-LOGGER = get_logger(name="[MhnCity.Longterm]", console=True, file=True)
-
 # (동일한 이미지)long_term_demo_0.mp4에 대해 (최소 0.1, 최대 3.5, 평균 1.7)
 # (앉은 자세 유지)long_term_demo_1.mp4에 대해 (최소 0.0, 최대 18.5, 평균 1.7)
 # (앉은 자세에서 숨쉬기)long_term_demo_2.mp4에 대해 (최소 0.0, 최대 26.7, 평균 8.2)
@@ -28,6 +26,7 @@ def check_longterm(confidence, threshhold):
     return False
 
 def Longterm(data_pipe, event_pipe):
+    logger = get_logger(name="[MhnCity.Longterm]", console=True, file=True)
     args = parse_args()
     hold_frames = [[] for x in range(args.max_person)]
     count = [0 for x in range(args.max_person)]
@@ -65,7 +64,7 @@ def Longterm(data_pipe, event_pipe):
                         count[i] = 0
             for i, c in enumerate(count):
                 if c > args.hold_time * args.fps:
-                    LOGGER.info(f"action: longterm, tid: {i}")
+                    logger.info(f"action: longterm, tid: {i}")
                     count[i] = 0
         else:
             time.sleep(0.0001)
