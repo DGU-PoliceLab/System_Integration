@@ -44,3 +44,5 @@ bash setting.sh
 ```bash
 python run.py
 ```
+
+.
