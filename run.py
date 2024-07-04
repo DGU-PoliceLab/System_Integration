@@ -29,10 +29,7 @@ from _HAR.MHNCITY.longterm.longterm import Longterm
 from variable import get_root_args, get_sort_args, get_debug_args
 from rtmo import get_model
 
-# 출력 로그 설정
-LOGGER = get_logger(name= '[RUN]', console= True, file= False)
-
-def wait_subprocess_ready(name, pipe):
+def wait_subprocess_ready(name, pipe, logger):
     while True:
         LOGGER.info(f'wating for {name} process to ready...')
         if pipe.recv():
@@ -42,6 +39,8 @@ def wait_subprocess_ready(name, pipe):
             time.sleep(0.1)
 
 def main():
+    # 출력 로그 설정
+    logger = get_logger(name= '[RUN]', console= True, file= True)
     # 루트 인자 및 기타 인자 설정
     args = get_root_args()
     dict_args = vars(args)
@@ -142,15 +141,15 @@ def main():
 
     # _HAR 모듈 실행 대기
     if 'selfharm' in args.modules:
-        wait_subprocess_ready("Selfharm", selfharm_input_pipe)
+        wait_subprocess_ready("Selfharm", selfharm_input_pipe, logger)
     if 'falldown' in args.modules:
-        wait_subprocess_ready("Falldown", falldown_input_pipe)
+        wait_subprocess_ready("Falldown", falldown_input_pipe, logger)
     if 'emotion' in args.modules:
-        wait_subprocess_ready("Emotion", emotion_input_pipe)
+        wait_subprocess_ready("Emotion", emotion_input_pipe, logger)
     if 'violence' in args.modules:
-        wait_subprocess_ready("Violence", violence_input_pipe)
+        wait_subprocess_ready("Violence", violence_input_pipe, logger)
     if 'longterm' in args.modules:
-        wait_subprocess_ready("Longterm", longterm_input_pipe)
+        wait_subprocess_ready("Longterm", longterm_input_pipe, logger)
 
     # 사람 감지 및 추적
     while cap.isOpened():
