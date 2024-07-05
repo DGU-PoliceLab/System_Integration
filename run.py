@@ -93,12 +93,11 @@ def main():
     # 디버그 모드
     if debug_args.debug == True:
         # DB 연결 및 CCTV 정보 조회
-        source = "_Input/videos/mhn_demo_1.mp4" 
-        # source = "_Input/videos/long_term_test_2.mp4" 
+        source = get_debug_args.source
         cctv_info = dict()
-        cctv_info['cctv_ip'] = -1
-        cctv_info['cctv_id'] = -1
-        cctv_info['cctv_name'] = -1
+        cctv_info['cctv_id'] = debug_args.cctv_id
+        cctv_info['cctv_ip'] = debug_args.cctv_ip
+        cctv_info['cctv_name'] = debug_args.cctv_name
     else:
         # DB 연결 및 CCTV 정보 조회
         try:
