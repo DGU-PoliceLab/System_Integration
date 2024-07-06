@@ -18,7 +18,8 @@ def get_arg(category = None, arg= None):
 
 def get_root_args():
     parser = ArgumentParser()
-    parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "longterm"],help='running modules')
+    # parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "longterm"],help='running modules')
+    parser.add_argument('--modules', type=list, default=["falldown"],help='running modules')
     parser.add_argument('--test', type=str, default='test',help='test')
     parser.add_argument('--nas_path', type=str, default= "/System_Integration/_Output/NAS", help='NAS path'),
     parser.add_argument('--img-size', type=int, default=1080, help='inference size (pixels)') # 480 -> 1080 수정완료.
@@ -78,7 +79,7 @@ def get_root_args():
         default="_PoseEstimation/mmlab/mmpose/checkpoints/rtmo-l_16xb16-600e_body7-640x640-b37118ce_20231211.pth", 
         help='mmpose rtmo checkpoint')
     # Event Delay
-    parser.add_argument('--event_delay', type=int, default=0, help='Event insert delay time')
+    parser.add_argument('--event_delay', type=int, default=9, help='Event insert delay time')
 
     args = parser.parse_args()
     args.jde = False
@@ -134,6 +135,7 @@ def get_falldown_args():
     parser = ArgumentParser(description="Falldown")
     parser.add_argument('--threshhold', type=float, default=0.6, help='falldown threshhold')
     parser.add_argument('--frame_step', type=int, default=14, help='inference frame step')
+    parser.add_argument('--longterm_status', type=bool, default=True, help='longterm status on/off')
     args = parser.parse_args()
     return args
 
