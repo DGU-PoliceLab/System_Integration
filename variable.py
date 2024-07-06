@@ -127,6 +127,14 @@ def get_debug_args():
     parser = ArgumentParser("DEBUG")
     parser.add_argument("--debug", type=bool, default=True)
     parser.add_argument("--visualize", type=bool, default=False)
+    parser.add_argument("--source", type=str, default="_Input/videos/mhn_demo_1.mp4")
+    parser.add_argument("--cctv_id", type=int, default=-1)
+    parser.add_argument("--cctv_ip", type=int, default=-1)
+    parser.add_argument("--cctv_name", type=int, default=-1)
+    parser.add_argument("--thermal_ip", type=str, default="")
+    parser.add_argument("--thermal_port", type=int, default=10603)
+    parser.add_argument("--rader_ip", type=str, default="")
+
     args = parser.parse_args()
     return args
 
