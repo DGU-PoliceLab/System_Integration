@@ -132,6 +132,7 @@ def get_debug_args():
     parser.add_argument("--cctv_ip", type=int, default=-1)
     parser.add_argument("--cctv_name", type=int, default=-1)
     parser.add_argument("--thermal_ip", type=str, default="")
+    parser.add_argument("--thermal_port", type=int, default=10603)
     parser.add_argument("--rader_ip", type=str, default="")
 
     args = parser.parse_args()
