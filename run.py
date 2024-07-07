@@ -132,7 +132,7 @@ def main():
     now = datetime.now()
     timestamp = str(now).replace(" ", "").replace(":",";")
     cap = cv2.VideoCapture(source)
-    fourcc = cv2.VideoWriter_fourcc('M','P', '4', 'V')
+    fourcc = cv2.VideoWriter_fourcc('M','P','4','V')
     fps = 30
     num_frame = 0
     if cap.get(cv2.CAP_PROP_FPS):
