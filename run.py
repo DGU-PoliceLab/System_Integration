@@ -95,7 +95,7 @@ def main():
     # 디버그 모드
     if debug_args.debug == True:
         # DB 연결 및 CCTV 정보 조회
-        source = get_debug_args.source
+        source = debug_args.source
         cctv_info = dict()
         cctv_info['id'] = debug_args.cctv_id
         cctv_info['ip'] = debug_args.cctv_ip
@@ -190,9 +190,9 @@ def main():
             online_targets = tracker.update(detections, skeletons, frame)
             num_frame += 1
             tracks = online_targets # 모듈로 전달할 감지 결과
-            if num_frame % fps == 0:
-                face_detections = face_detector.detect(frame)
-                temperature = Thermal(thermal_info, frame, face_detections)
+            # if num_frame % fps == 0:
+            #     face_detections = face_detector.detect(frame)
+            #     temperature = Thermal(thermal_info, frame, face_detections)
             if debug_args.visualize:
                 meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame} # 모듈로 전달할 메타데이터
             else:
