@@ -21,7 +21,6 @@ for i, row in enumerate(raw_data):
         
         if vital_id not in base:
             base.append(vital_id)
-            cur_vital_info.append(row)
             pos = cur_track_info.get(vital_id)
             if pos != None:
                 cur_vital_info.append({"id": vital_id, "pos": pos, "heartbeat_rate": heartbeat_rate, "breath_rate": breath_rate})
@@ -34,5 +33,5 @@ for i, row in enumerate(raw_data):
             pos = cur_track_info.get(vital_id)
             if pos != None:
                 cur_vital_info.append({"id": vital_id, "pos": pos, "heartbeat_rate": heartbeat_rate, "breath_rate": breath_rate})
-with open('rader.json', 'w', encoding='utf-8') as f:
+with open('rader_data.json', 'w', encoding='utf-8') as f:
     json.dump(result, f, indent="\t")
