@@ -10,6 +10,7 @@ import cv2
 import torch
 import numpy as np
 import time
+import json
 from datetime import datetime
 from _Tracker.BoTSORT.tracker.bot_sort import BoTSORT
 from _DB.db_controller import connect_db, insert_event, insert_realtime
@@ -20,6 +21,7 @@ from _Utils.logger import get_logger
 from _Utils.head_bbox import *
 from _Utils.pipeline import *
 import _Utils.draw_bbox_skeleton as draw_bbox_skeleton 
+import _Utils.draw_vital as draw_vital
 from _Sensor.radar import radar_start
 from _Sensor.thermal import Thermal
 import _MOT.face_detection as face_detection
@@ -95,7 +97,7 @@ def main():
     # 디버그 모드
     if debug_args.debug == True:
         # DB 연결 및 CCTV 정보 조회
-        source = get_debug_args.source
+        source = debug_args.source
         cctv_info = dict()
         cctv_info['id'] = debug_args.cctv_id
         cctv_info['ip'] = debug_args.cctv_ip
@@ -103,6 +105,10 @@ def main():
         thermal_info = dict()
         thermal_info['ip'] = debug_args.thermal_ip
         thermal_info['port'] = debug_args.thermal_port
+        rader_data = None
+        with open(debug_args.rader_data, 'r') as f:
+            rader_data = json.load(f)
+        
     else:
         # DB 연결 및 CCTV 정보 조회
         try:
@@ -132,7 +138,7 @@ def main():
     now = datetime.now()
     timestamp = str(now).replace(" ", "").replace(":",";")
     cap = cv2.VideoCapture(source)
-    fourcc = cv2.VideoWriter_fourcc('M','P', '4', 'V')
+    fourcc = cv2.VideoWriter_fourcc('M','P','4','V')
     fps = 30
     num_frame = 0
     if cap.get(cv2.CAP_PROP_FPS):
@@ -188,19 +194,41 @@ def main():
             detections = np.array(detections, dtype=np.float32)
             skeletons = np.array(skeletons, dtype=np.float32)
             online_targets = tracker.update(detections, skeletons, frame)
+            if debug_args.debug:
+                # if num_frame % fps == 0:
+                #     face_detections = face_detector.detect(frame)
+                #     temperature = Thermal(thermal_info, frame, face_detections)
+                if num_frame < len(rader_data):
+                    cur_rader_data = rader_data[num_frame]
+                    vital_data = cur_rader_data["vital_info"]
+                    target_data = []
+                    for track in online_targets:
+                        tid = track.track_id
+                        x1, y1, x2, y2 = track.tlbr
+                        target_data.append({"id": tid, "range": [x1, x2, y1, y2]})
+
+                    for vital in vital_data:
+                        pos, depth = vital["pos"]
+                        heartbeat_rate = vital["heartbeat_rate"]
+                        breath_rate = vital["breath_rate"]
+                        offset = (int(pos) + 200) / 400 * int(w)
+                        for target in target_data:
+                            tid = target["id"]
+                            pos_range = target["range"]
+                            if offset >= pos_range[0] and offset <= pos_range[1]:
+                                logger.info(f"tid:{tid}, heartbeat_rate: {heartbeat_rate}, breath_rate: {breath_rate}")
+                                if debug_args.visualize:
+                                    draw_frame = draw_vital.draw(draw_frame, int(pos_range[0]), int(pos_range[2]), heartbeat_rate, breath_rate)
+                                    
             num_frame += 1
             tracks = online_targets # 모듈로 전달할 감지 결과
-            if num_frame % fps == 0:
-                face_detections = face_detector.detect(frame)
-                temperature = Thermal(thermal_info, frame, face_detections)
+            
             if debug_args.visualize:
                 meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame} # 모듈로 전달할 메타데이터
             else:
                 meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} # 모듈로 전달할 메타데이터
             input_data = [tracks, meta_data] # 모듈로 전달할 데이터
             e_input_data = [frame, meta_data]
-
-
             
             # 모듈로 데이터 전송
             if 'selfharm' in args.modules:

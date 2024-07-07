@@ -39,7 +39,7 @@ class RetinaNetDetector(Detector):
             #     map_location=torch_utils.get_device()
             # )
     
-            state_dict = torch.load("/System_Integration/_HAR/HRI/Models/Resnet50_Final.pth")
+            state_dict = torch.load("/System_Integration/_MOT/face_detection/checkpoints/Resnet50_Final.pth")
             state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
         net = RetinaFace(cfg=cfg)
         net.eval()
