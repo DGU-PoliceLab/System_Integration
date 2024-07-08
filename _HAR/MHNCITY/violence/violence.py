@@ -15,7 +15,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_1', type=str, default='_HAR/MHNCITY/models/model_epoch_270.pth', help='fight 1 model checkpoint path')
     parser.add_argument('--model_2', type=str, default='_HAR/MHNCITY/models/model_epoch_397.pth', help='fight 1 model checkpoint path')
-    parser.add_argument('--threshhold', type=float, default=0.49, help='Violence threshhold')
+    parser.add_argument('--threshhold', type=float, default=0.8, help='Violence threshhold')
     parser.add_argument('--window_size', type=int, default=12, help='Window size')
     parser.add_argument('--num_frames', type=int, default=5, help='num frames')
     parser.add_argument('--num_persons', type=int, default=5, help='num persons')
