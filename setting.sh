@@ -1,14 +1,15 @@
 # Make Log Dir
 mkdir ./_Output
 mkdir ./_Output/log
+mkdir ./_Output/NAS
+mkdir ./_MOT/face_detection/checkpoints
 mkdir ./_PoseEstimation/mmlab/mmpose/checkpoints
 mkdir ./_HAR/HRI/models
 mkdir ./_HAR/CSDC/models
 mkdir ./_HAR/MHNCITY/violence/models
-mkdir -p /root/.cache
-mkdir -p /root/.cache/torch
-mkdir -p /root/.cache/torch/hub
-mkdir -p /root/.cache/torch/hub/checkpoints
+
+# Face Deection Checkpoints
+wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/EfyxWktMAahMk-6wJ2RfpcoBE39nuIBp41WI0wUIthdd0Q?e=BxrvKa&download=1" -O ./_MOT/face_detection/checkpoints/Resnet50_Final.pth
 
 # RTMO Checkpoints
 wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/EbTvNVxo52REgaFHwtfuJokB5wEMOdyHbHgebBxW7OMT-w?e=jHzCnf&download=1" -O ./_PoseEstimation/mmlab/mmpose/checkpoints/rtmo-l_16xb16-600e_body7-640x640-b37118ce_20231211.pth
@@ -18,10 +19,8 @@ wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/ERdu
 wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/EdjNyXlMOcNLjB8wwa0P_GkBKWfNIT6qlyF-DGJiqQSmmQ?e=cnEdn1&download=1" -O ./_HAR/PLASS/models/checkpoint.pth
 
 # HRI Checkpoints
-wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/EfyxWktMAahMk-6wJ2RfpcoBE39nuIBp41WI0wUIthdd0Q?e=BxrvKa&download=1" -O ./_HAR/HRI/models/Resnet50_Final.pth
 wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/Eaa778hjqadBq_536FGvcJgBzOV5JbSRnz7bZRuidiKOXw?e=H4JNQD&download=1" -O ./_HAR/HRI/models/model_state.pth
 wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/EfItQVH89CpCiIUCuAXF9fkBdD55mgG-7yU7dp33kNkSqA?e=yPueyM&download=1" -O ./_HAR/HRI/models/enet_b2_7.pt
-cp /System_Integration/_HAR/HRI/models/Resnet50_Final.pth /root/.cache/torch/hub/checkpoints/
 
 # CSDC Checkpoints
 wget "https://dguackr-my.sharepoint.com/:u:/g/personal/qqaazz0222_dgu_ac_kr/Ea1MusgVUiZOtU4wVkgYW3ABZDiW8pEz4P5jNucZNbMA0Q?e=KYBlk0&download=1" -O ./_HAR/CSDC/models/tsstg-model-best-1.pth
