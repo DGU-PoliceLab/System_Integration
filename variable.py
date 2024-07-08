@@ -18,8 +18,7 @@ def get_arg(category = None, arg= None):
 
 def get_root_args():
     parser = ArgumentParser()
-    parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "longterm"],help='running modules')
-    # parser.add_argument('--modules', type=list, default=[],help='running modules')
+    parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion"],help='running modules')
     parser.add_argument('--test', type=str, default='test',help='test')
     parser.add_argument('--nas_path', type=str, default= "/System_Integration/_Output/NAS", help='NAS path'),
     parser.add_argument('--img-size', type=int, default=1080, help='inference size (pixels)') # 480 -> 1080 수정완료.
@@ -50,40 +49,86 @@ def get_root_args():
     parser.add_argument("--new_track_thresh", default=0.7, type=float, help="new track thresh")
     parser.add_argument("--track_buffer", type=int, default=150, help="the frames for keep lost tracks")
     parser.add_argument("--match_thresh", type=float, default=0.9, help="matching threshold for tracking")
-    parser.add_argument("--aspect_ratio_thresh", type=float, default=1.6,
-                        help="threshold for filtering out boxes of which aspect ratio are above the given value.")
+    parser.add_argument("--aspect_ratio_thresh", type=float, default=1.6, help="threshold for filtering out boxes of which aspect ratio are above the given value.")
     parser.add_argument('--min_box_area', type=float, default=10, help='filter out tiny boxes')
-    parser.add_argument("--fuse-score", dest="mot20", default=True, action="store_true",
-                        help="fuse score and iou for association")
+    parser.add_argument("--fuse-score", dest="mot20", default=True, action="store_true", help="fuse score and iou for association")
     # CMC
     parser.add_argument("--cmc-method", default="orb", type=str, help="cmc method: files (Vidstab GMC) | orb | ecc")
     # ReID (Fast-ReID)
     parser.add_argument("--with-reid", dest="with_reid", default=True, action="store_true", help="with ReID module.")
-    parser.add_argument("--fast-reid-config", dest="fast_reid_config", default=r"fast_reid/configs/MOT17/sbs_S50.yml",
-                        type=str, help="reid config file path")
-    parser.add_argument("--fast-reid-weights", dest="fast_reid_weights", default=r"pretrained/mot17_sbs_S50.pth",
-                        type=str, help="reid config file path")
-    parser.add_argument('--proximity_thresh', type=float, default=0.5,
-                        help='threshold for rejecting low overlap reid matches')
-    parser.add_argument('--appearance_thresh', type=float, default=0.25,
-                        help='threshold for rejecting low appearance similarity reid matches')
+    parser.add_argument("--fast-reid-config", dest="fast_reid_config", default=r"fast_reid/configs/MOT17/sbs_S50.yml", type=str, help="reid config file path")
+    parser.add_argument("--fast-reid-weights", dest="fast_reid_weights", default=r"pretrained/mot17_sbs_S50.pth", type=str, help="reid config file path")
+    parser.add_argument('--proximity_thresh', type=float, default=0.5, help='threshold for rejecting low overlap reid matches')
+    parser.add_argument('--appearance_thresh', type=float, default=0.25, help='threshold for rejecting low appearance similarity reid matches')
     # RTMO
-    parser.add_argument(
-        '--rtmo-config', 
-        type=str, 
-        default="_PoseEstimation/mmlab/configs/body_2d_keypoint/rtmo/body7/rtmo-l_16xb16-600e_body7-640x640.py", 
-        help='mmpose rtmo checkpoint')
-    parser.add_argument(
-        '--rtmo_checkpoint', 
-        type=str, 
-        default="_PoseEstimation/mmlab/mmpose/checkpoints/rtmo-l_16xb16-600e_body7-640x640-b37118ce_20231211.pth", 
-        help='mmpose rtmo checkpoint')
+    parser.add_argument('--rtmo-config', type=str, default="_PoseEstimation/mmlab/configs/body_2d_keypoint/rtmo/body7/rtmo-l_16xb16-600e_body7-640x640.py", help='mmpose rtmo checkpoint')
+    parser.add_argument('--rtmo_checkpoint', type=str, default="_PoseEstimation/mmlab/mmpose/checkpoints/rtmo-l_16xb16-600e_body7-640x640-b37118ce_20231211.pth", help='mmpose rtmo checkpoint')
     # Event Delay
     parser.add_argument('--event_delay', type=int, default=9, help='Event insert delay time')
-
     args = parser.parse_args()
     args.jde = False
     args.ablation = False
+    return args
+
+def get_debug_args():
+    parser = ArgumentParser("DEBUG")
+    parser.add_argument("--debug", type=bool, default=True)
+    parser.add_argument("--visualize", type=bool, default=False)
+    parser.add_argument("--source", type=str, default="_Input/videos/mhn_demo_1.mp4")
+    parser.add_argument("--cctv_id", type=int, default=-1)
+    parser.add_argument("--cctv_ip", type=int, default=-1)
+    parser.add_argument("--cctv_name", type=int, default=-1)
+    parser.add_argument("--thermal_ip", type=str, default="")
+    parser.add_argument("--thermal_port", type=int, default=10603)
+    parser.add_argument("--rader", type=bool, default=False)
+    parser.add_argument("--rader_ip", type=str, default="")
+    parser.add_argument("--rader_data", type=str, default="_Input/data/rader_data.json")
+    args = parser.parse_args()
+    return args
+
+def get_scale_args():
+    parser = ArgumentParser("SCALE")
+    parser.add_argument("--selfharm", type=int, default=4)
+    parser.add_argument("--falldown", type=int, default=2)
+    parser.add_argument("--emotion", type=int, default=1)
+    parser.add_argument("--violence", type=int, default=1)
+    args = parser.parse_args()
+    return args
+
+def get_falldown_args():
+    parser = ArgumentParser(description="Falldown")
+    parser.add_argument('--threshhold', type=float, default=0.6, help='falldown threshhold')
+    parser.add_argument('--frame_step', type=int, default=14, help='inference frame step')
+    parser.add_argument('--longterm_status', type=bool, default=True, help='longterm status on/off')
+    args = parser.parse_args()
+    return args
+
+def get_selfharm_args():
+    parser = ArgumentParser(description='Selfharm')
+    parser.add_argument('--config', default="_HAR/PLASS/models/config.py", help='skeleton model config file path')
+    parser.add_argument('--checkpoint', default="_HAR/PLASS/models/checkpoint.pth", help='skeleton model checkpoint file/url')
+    parser.add_argument('--label-map', default='_HAR/PLASS/models/labelmap.txt', help='label map file')
+    parser.add_argument('--device', type=str, default='cuda:0', help='CPU/CUDA device option')
+    parser.add_argument('--step-size', type=int, default=10, help='inference step size')
+    parser.add_argument('--thread_mode', type=bool, default=False, help='use inference thread')
+    args = parser.parse_args()
+    return args
+
+def get_emotion_args():
+    parser = ArgumentParser(description="Emotion")
+    parser.add_argument('--model_state', type=str, default='_HAR/HRI/models/model_state.pth', help='model state checkpoint path')
+    parser.add_argument('--face_detector', type=str, default='RetinaNetResNet50', help='DSFDDetector/RetinaNetResNet50')
+    parser.add_argument('--device', type=str, default='cuda', help='CPU/CUDA device option')
+    args = parser.parse_args()
+    return args
+
+def get_longterm_args():
+    parser = ArgumentParser(description="Longterm")
+    parser.add_argument('--threshhold', type=float, default=1500.0, help='longterm threshhold')
+    parser.add_argument('--hold_time', type=int, default=1, help='hold time (seconds)')
+    parser.add_argument('--fps', type=int, default=30, help='frame num')
+    parser.add_argument('--max_person', type=int, default=10, help='max person num')
+    args = parser.parse_args()
     return args
 
 def get_sort_args():
@@ -121,60 +166,5 @@ def get_sort_args():
     parser.add_argument("--fast-reid-weights", dest="fast_reid_weights", default="_Tracker/BoTSORT/fast_reid/checkpoints/MOT17/mot17_sbs_S50.pth", type=str,help="reid config file path")
     parser.add_argument('--proximity_thresh', type=float, default=0.5, help='threshold for rejecting low overlap reid matches')
     parser.add_argument('--appearance_thresh', type=float, default=0.25, help='threshold for rejecting low appearance similarity reid matches')
-    args = parser.parse_args()
-    return args
-
-def get_debug_args():
-    parser = ArgumentParser("DEBUG")
-    parser.add_argument("--debug", type=bool, default=True)
-    parser.add_argument("--visualize", type=bool, default=True)
-    # parser.add_argument("--source", type=str, default="_Input/videos/mhn_demo_1.mp4")
-    parser.add_argument("--source", type=str, default="_Input/videos/rader_rgb_demo.mp4")
-    parser.add_argument("--cctv_id", type=int, default=-1)
-    parser.add_argument("--cctv_ip", type=int, default=-1)
-    parser.add_argument("--cctv_name", type=int, default=-1)
-    parser.add_argument("--thermal_ip", type=str, default="")
-    parser.add_argument("--thermal_port", type=int, default=10603)
-    parser.add_argument("--rader_ip", type=str, default="")
-    parser.add_argument("--rader_data", type=str, default="_Input/data/rader_data.json")
-
-    args = parser.parse_args()
-    return args
-
-def get_falldown_args():
-    parser = ArgumentParser(description="Falldown")
-    parser.add_argument('--threshhold', type=float, default=0.6, help='falldown threshhold')
-    parser.add_argument('--frame_step', type=int, default=14, help='inference frame step')
-    parser.add_argument('--longterm_status', type=bool, default=True, help='longterm status on/off')
-    args = parser.parse_args()
-    return args
-
-def get_selfharm_args():
-    parser = ArgumentParser(description='Selfharm')
-    parser.add_argument(
-        '--config',
-        default="_HAR/PLASS/models/config.py",
-        help='skeleton model config file path')
-    parser.add_argument(
-        '--checkpoint',
-        default="_HAR/PLASS/models/checkpoint.pth",
-        help='skeleton model checkpoint file/url')
-    parser.add_argument(
-        '--label-map',
-        default='_HAR/PLASS/models/labelmap.txt',
-        help='label map file')
-    parser.add_argument(
-        '--device', type=str, default='cuda:0', help='CPU/CUDA device option')
-    parser.add_argument(
-        '--step-size', type=int, default=15, help='inference step size')
-    args = parser.parse_args()
-    return args
-
-def get_emotion_args():
-    parser = ArgumentParser(description="Emotion")
-    parser.add_argument('--model_state', type=str, default='_HAR/HRI/models/model_state.pth', help='model state checkpoint path')
-    parser.add_argument('--face_detector', type=str, default='RetinaNetResNet50', help='DSFDDetector/RetinaNetResNet50')
-    parser.add_argument(
-        '--device', type=str, default='cuda', help='CPU/CUDA device option')
     args = parser.parse_args()
     return args

@@ -1,14 +1,13 @@
-import numpy as np
 import time
-import argparse
+import numpy as np
+from multiprocessing import Process, Pipe
 from collections import deque
+from copy import deepcopy
 from CSDC.ActionsEstLoader import TSSTG
 from _HAR.MHNCITY.longterm.longterm import Longterm
-from multiprocessing import Process, Pipe
 from _Utils.logger import get_logger
 from _Utils._visualize import visualize
 from variable import get_falldown_args, get_debug_args
-from copy import deepcopy
 
 def preprocess(skeletons, frame_step):
     skeletons = deque(skeletons, maxlen=frame_step)
@@ -23,7 +22,7 @@ def preprocess(skeletons, frame_step):
 def check_falldown(action_name='Normal', confidence=0, threshold=0.6):
     if action_name == 'Fall Down' and threshold < confidence:
         return True
-    return True   
+    return False   
 
 def Falldown(data_pipe, event_pipe):
     logger = get_logger(name="[CSDC]", console=True, file=False)
@@ -45,6 +44,11 @@ def Falldown(data_pipe, event_pipe):
         confidence = 0
         data = data_pipe.recv()
         if data:
+            if data == "end_flag":
+                logger.warning("Falldown process end.")
+                if args.longterm_status:
+                    longterm_input_pipe.send("end_flag")
+                break
             tracks, meta_data = data
             if args.longterm_status:
                 longterm_input_tracks = deepcopy(tracks)

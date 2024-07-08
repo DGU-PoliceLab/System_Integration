@@ -7,10 +7,6 @@ import time
 from _Utils.logger import get_logger
 from collections import deque
 
-LOGGER = get_logger(name="[MhnCity.Violence]", console=False, file=False)
-THRESHHOLD = 0.49
-WINDOW_SIZE = 12
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_1', type=str, default='_HAR/MHNCITY/models/model_epoch_270.pth', help='fight 1 model checkpoint path')
@@ -64,6 +60,7 @@ def pad_keypoints(keypoints, num_persons, num_keypoints):
 
 
 def Violence(data_pipe, event_pipe):
+    logger = get_logger(name="[MhnCity.Violence]", console=False, file=False)
     args = parse_args()
     fight_model_1 = TemporalDynamicGCN(window_size=args.window_size, num_frames=args.num_frames, num_persons=args.num_persons, num_keypoints=args.num_keypoints, num_features=2, num_classes=1, model_path=args.model_1)
     fight_model_1 = fight_model_1.to(args.device)
@@ -78,6 +75,9 @@ def Violence(data_pipe, event_pipe):
         # print("loop진입")
         data = data_pipe.recv()
         if data:
+            if data == False:
+                logger.warning("Selfharm process end.")
+                break
             tracks, meta_data = data
             frame_skeletons = []
             current_frame_count += 1
@@ -112,11 +112,11 @@ def Violence(data_pipe, event_pipe):
                 max_score_2, mean_score_2 = evaluate_frames(fight_model_2, all_batch_keypoints)
                 
                 mean_avg_score = adjust_mean(mean_score_1, mean_score_2)
-                LOGGER.debug(f"mean_avg_score : {mean_avg_score}")           
-                LOGGER.info(f"mean_avg_score : {mean_avg_score}")         
+                logger.debug(f"mean_avg_score : {mean_avg_score}")           
+                logger.info(f"mean_avg_score : {mean_avg_score}")         
                 if check_violence(confidence=mean_avg_score, threshhold=args.threshhold):
                     tid = 1
-                    LOGGER.info("action: violence")
+                    logger.info("action: violence")
                     event_pipe.send({'action': "violence", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime']})
 
                 all_batch_keypoints = []        
