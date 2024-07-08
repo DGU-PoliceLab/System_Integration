@@ -1,16 +1,14 @@
-import argparse
 import sys
 sys.path.insert(0, '/System_Integration/_HAR/PLASS')
 import time
-from threading import Thread
 import numpy as np
 import mmengine
-from mmaction.apis import inference_skeleton, init_recognizer
+from threading import Thread
 from multiprocessing import Process, Pipe
+from mmaction.apis import inference_skeleton, init_recognizer
 from _Utils.logger import get_logger
 from _Utils._visualize import visualize
 from variable import get_selfharm_args, get_debug_args
-
 
 EVENT = ["normla", 0.0]
 
@@ -61,7 +59,7 @@ def inference(model, label_map, pose_data, meta_data, pipe, logger):
 
 def Selfharm(data_pipe, event_pipe):
     global EVENT
-    logger = get_logger(name="[PLASS]", console=True, file=True)
+    logger = get_logger(name="[PLASS]", console=True, file=False)
     args = get_selfharm_args()
     debug_args = get_debug_args()
     if debug_args.visualize:
@@ -83,11 +81,18 @@ def Selfharm(data_pipe, event_pipe):
             meta_data = meta_array[:args.step_size]
             pose_array = pose_array[args.step_size:]
             meta_array = meta_array[args.step_size:]
-            infrence_thread = Thread(
-                target=inference, 
-                args=(model, label_map, pose_data, meta_data, event_pipe, logger)).start()
+            if args.thread_mode:
+                infrence_thread = Thread(
+                    target=inference, 
+                    args=(model, label_map, pose_data, meta_data, event_pipe, logger))
+                infrence_thread.start()
+            else:
+                inference(model, label_map, pose_data, meta_data, event_pipe, logger)
         data = data_pipe.recv()
         if data and data != prev_data:
+            if data == "end_flag":
+                logger.warning("Selfharm process end.")
+                break
             tracks, meta_data = data
             prev_data = data
             pose_data = pre_processing(tracks)
@@ -97,6 +102,3 @@ def Selfharm(data_pipe, event_pipe):
                 frame_pipe.send([meta_data['frame'], EVENT[0], EVENT[1]])
         else:
             time.sleep(0.0001)
-
-if __name__ == '__main__':
-    Selfharm()
