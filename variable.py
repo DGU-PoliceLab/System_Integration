@@ -79,7 +79,7 @@ def get_root_args():
         default="_PoseEstimation/mmlab/mmpose/checkpoints/rtmo-l_16xb16-600e_body7-640x640-b37118ce_20231211.pth", 
         help='mmpose rtmo checkpoint')
     # Event Delay
-    parser.add_argument('--event_delay', type=int, default=0, help='Event insert delay time')
+    parser.add_argument('--event_delay', type=int, default=9, help='Event insert delay time')
 
     args = parser.parse_args()
     args.jde = False
@@ -145,6 +145,7 @@ def get_falldown_args():
     parser = ArgumentParser(description="Falldown")
     parser.add_argument('--threshhold', type=float, default=0.6, help='falldown threshhold')
     parser.add_argument('--frame_step', type=int, default=14, help='inference frame step')
+    parser.add_argument('--longterm_status', type=bool, default=True, help='longterm status on/off')
     args = parser.parse_args()
     return args
 

@@ -29,7 +29,7 @@ from _HAR.PLASS.selfharm import Selfharm
 from _HAR.CSDC.falldown import Falldown
 from _HAR.HRI.emotion import Emotion
 from _HAR.MHNCITY.violence.violence import Violence
-from _HAR.MHNCITY.longterm.longterm import Longterm
+# from _HAR.MHNCITY.longterm.longterm import Longterm
 from variable import get_root_args, get_sort_args, get_debug_args
 from rtmo import get_model
 
@@ -67,8 +67,8 @@ def main():
         emotion_input_pipe, emotion_output_pipe = Pipe()
     if 'violence' in args.modules:
         violence_input_pipe, violence_output_pipe = Pipe()
-    if 'longterm' in args.modules:
-        longterm_input_pipe, longterm_output_pipe = Pipe()
+    # if 'longterm' in args.modules:
+    #     longterm_input_pipe, longterm_output_pipe = Pipe()
 
     # 이벤트 처리를 위한 수집을 위한 파이프라인 생성
     event_input_pipe, event_output_pipe = Pipe()
@@ -90,9 +90,9 @@ def main():
     if 'violence' in args.modules:
         violence_process = Process(target=Violence, args=(violence_output_pipe, event_input_pipe,))
         violence_process.start()
-    if 'longterm' in args.modules:
-        longterm_process = Process(target=Longterm, args=(longterm_output_pipe, event_input_pipe,))
-        longterm_process.start()
+    # if 'longterm' in args.modules:
+    #     longterm_process = Process(target=Longterm, args=(longterm_output_pipe, event_input_pipe,))
+    #     longterm_process.start()
 
     # 디버그 모드
     if debug_args.debug == True:
@@ -160,8 +160,8 @@ def main():
         wait_subprocess_ready("Emotion", emotion_input_pipe, logger)
     if 'violence' in args.modules:
         wait_subprocess_ready("Violence", violence_input_pipe, logger)
-    if 'longterm' in args.modules:
-        wait_subprocess_ready("Longterm", longterm_input_pipe, logger)
+    # if 'longterm' in args.modules:
+    #     wait_subprocess_ready("Longterm", longterm_input_pipe, logger)
 
     # 사람 감지 및 추적
     while cap.isOpened():
@@ -239,8 +239,8 @@ def main():
                 emotion_input_pipe.send(e_input_data)
             if 'violence' in args.modules:
                 violence_input_pipe.send(input_data)
-            if 'longterm' in args.modules:
-                longterm_input_pipe.send(input_data)
+            # if 'longterm' in args.modules:
+            #     longterm_input_pipe.send(input_data)
 
             if debug_args.visualize:
                 out.write(draw_frame)

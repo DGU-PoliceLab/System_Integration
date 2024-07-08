@@ -13,8 +13,8 @@ from _Utils.logger import get_logger
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--threshhold', type=float, default=15.0, help='longterm threshhold')
-    parser.add_argument('--hold_time', type=int, default=10, help='hold time (seconds)')
+    parser.add_argument('--threshhold', type=float, default=1500.0, help='longterm threshhold')
+    parser.add_argument('--hold_time', type=int, default=1, help='hold time (seconds)')
     parser.add_argument('--fps', type=int, default=30, help='frame num')
     parser.add_argument('--max_person', type=int, default=10, help='max person num')
     args = parser.parse_args()
