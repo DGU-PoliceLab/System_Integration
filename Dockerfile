@@ -42,5 +42,6 @@ RUN mim install mmengine
 WORKDIR /
 RUN git clone https://github.com/DGU-PoliceLab/System_Integration.git
 WORKDIR /System_Integration
-RUN bash setting.sh
+# After running the Docker container, run the command below. (/System_Integeration)
+# RUN bash setting.sh
 CMD ["bash"]
