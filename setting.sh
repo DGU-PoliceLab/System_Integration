@@ -1,6 +1,7 @@
 # Make Log Dir
 mkdir ./_Output
 mkdir ./_Output/log
+mkdir ./_Output/NAS
 mkdir ./_PoseEstimation/mmlab/mmpose/checkpoints
 mkdir ./_HAR/HRI/models
 mkdir ./_HAR/CSDC/models
