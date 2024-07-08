@@ -93,6 +93,8 @@ def overlay_images(rgb_image, thermal_image, detections, logger):
 def Thermal(thermal_info, frame, detections):
     logger = get_logger(name= '[THERMAL]', console= True, file= False)
     rgb_image = frame
-    thermal_image = receive_thermal_image(thermal_info.ip, thermal_info.port, logger)
+    ip = thermal_info["ip"]
+    port = thermal_info["port"]
+    thermal_image = receive_thermal_image(ip, port, logger)
     temperature = overlay_images(rgb_image, thermal_image, detections, logger)
     return temperature
