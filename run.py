@@ -10,6 +10,7 @@ import cv2
 import torch
 import numpy as np
 import time
+import json
 from datetime import datetime
 from _Tracker.BoTSORT.tracker.bot_sort import BoTSORT
 from _DB.db_controller import connect_db, insert_event, insert_realtime
@@ -20,7 +21,10 @@ from _Utils.logger import get_logger
 from _Utils.head_bbox import *
 from _Utils.pipeline import *
 import _Utils.draw_bbox_skeleton as draw_bbox_skeleton 
+import _Utils.draw_vital as draw_vital
 from _Sensor.radar import radar_start
+from _Sensor.thermal import Thermal
+import _MOT.face_detection as face_detection
 from _HAR.PLASS.selfharm import Selfharm
 from _HAR.CSDC.falldown import Falldown
 from _HAR.HRI.emotion import Emotion
@@ -31,9 +35,9 @@ from rtmo import get_model
 
 def wait_subprocess_ready(name, pipe, logger):
     while True:
-        LOGGER.info(f'wating for {name} process to ready...')
+        logger.info(f'wating for {name} process to ready...')
         if pipe.recv():
-            LOGGER.info(f'{name} process ready')
+            logger.info(f'{name} process ready')
             break
         else:
             time.sleep(0.1)
@@ -93,12 +97,18 @@ def main():
     # 디버그 모드
     if debug_args.debug == True:
         # DB 연결 및 CCTV 정보 조회
-        # source = "_Input/videos/mhn_demo_1.mp4" 
-        source = "_Input/videos/long_term_demo_0.mp4" 
+        source = debug_args.source
         cctv_info = dict()
-        cctv_info['cctv_ip'] = -1
-        cctv_info['cctv_id'] = -1
-        cctv_info['cctv_name'] = -1
+        cctv_info['id'] = debug_args.cctv_id
+        cctv_info['ip'] = debug_args.cctv_ip
+        cctv_info['name'] = debug_args.cctv_name
+        thermal_info = dict()
+        thermal_info['ip'] = debug_args.thermal_ip
+        thermal_info['port'] = debug_args.thermal_port
+        rader_data = None
+        with open(debug_args.rader_data, 'r') as f:
+            rader_data = json.load(f)
+        
     else:
         # DB 연결 및 CCTV 정보 조회
         try:
@@ -107,26 +117,28 @@ def main():
                 if dict_args['video_file'] != "":
                     cctv_info = get_cctv_info(conn)
             else:
-                LOGGER.warning('RUN-CCTV Database connection is not open.')
+                logger.warning('RUN-CCTV Database connection is not open.')
                 cctv_info = {'cctv_id': 404}
         except Exception as e:
-            LOGGER.warning(f'Unable to connect to database, error: {e}')
+            logger.warning(f'Unable to connect to database, error: {e}')
             cctv_info = {'cctv_id': 404}
 
         cctv_info = cctv_info[1]
-        source = cctv_info['cctv_ip']
+        source = cctv_info['ip']
         Process(target=object_snapshot_control, args=(object_snapshot_control_queue,)).start()
     # CCTV 정보 출력
-    LOGGER.info(f"cctv_info : {cctv_info}")
+    logger.info(f"cctv_info : {cctv_info}")
 
     # 사람 감지 및 추적을 위한 모델 로드
     inferencer, init_args, call_args, display_alias = get_model()
+    # 얼굴 감지 모델 로드
+    face_detector = face_detection.build_detector('RetinaNetResNet50', confidence_threshold=.5, nms_iou_threshold=.3)
 
     # 동영상 관련 설정
     now = datetime.now()
     timestamp = str(now).replace(" ", "").replace(":",";")
     cap = cv2.VideoCapture(source)
-    fourcc = cv2.VideoWriter_fourcc('M','P', '4', 'V')
+    fourcc = cv2.VideoWriter_fourcc('M','P','4','V')
     fps = 30
     num_frame = 0
     if cap.get(cv2.CAP_PROP_FPS):
@@ -165,7 +177,7 @@ def main():
             for _ in inferencer(**temp_call_args):
                 pred = _['predictions'][0]
                 l_p = len(pred)
-                LOGGER.info(f'frame #{num_frame} pose_results- {l_p} person detect!')
+                logger.info(f'frame #{num_frame} pose_results- {l_p} person detect!')
                 n_person = 1
                 pred.sort(key = lambda x: x['bbox'][0][0])
 
@@ -182,12 +194,39 @@ def main():
             detections = np.array(detections, dtype=np.float32)
             skeletons = np.array(skeletons, dtype=np.float32)
             online_targets = tracker.update(detections, skeletons, frame)
+            if debug_args.debug:
+                # if num_frame % fps == 0:
+                #     face_detections = face_detector.detect(frame)
+                #     temperature = Thermal(thermal_info, frame, face_detections)
+                if num_frame < len(rader_data):
+                    cur_rader_data = rader_data[num_frame]
+                    vital_data = cur_rader_data["vital_info"]
+                    target_data = []
+                    for track in online_targets:
+                        tid = track.track_id
+                        x1, y1, x2, y2 = track.tlbr
+                        target_data.append({"id": tid, "range": [x1, x2, y1, y2]})
+
+                    for vital in vital_data:
+                        pos, depth = vital["pos"]
+                        heartbeat_rate = vital["heartbeat_rate"]
+                        breath_rate = vital["breath_rate"]
+                        offset = (int(pos) + 200) / 400 * int(w)
+                        for target in target_data:
+                            tid = target["id"]
+                            pos_range = target["range"]
+                            if offset >= pos_range[0] and offset <= pos_range[1]:
+                                logger.info(f"tid:{tid}, heartbeat_rate: {heartbeat_rate}, breath_rate: {breath_rate}")
+                                if debug_args.visualize:
+                                    draw_frame = draw_vital.draw(draw_frame, int(pos_range[0]), int(pos_range[2]), heartbeat_rate, breath_rate)
+                                    
             num_frame += 1
             tracks = online_targets # 모듈로 전달할 감지 결과
+            
             if debug_args.visualize:
-                meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['cctv_name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame} # 모듈로 전달할 메타데이터
+                meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame} # 모듈로 전달할 메타데이터
             else:
-                meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['cctv_name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} # 모듈로 전달할 메타데이터
+                meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} # 모듈로 전달할 메타데이터
             input_data = [tracks, meta_data] # 모듈로 전달할 데이터
             e_input_data = [frame, meta_data]
             

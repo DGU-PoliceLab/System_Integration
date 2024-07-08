@@ -18,8 +18,8 @@ def get_arg(category = None, arg= None):
 
 def get_root_args():
     parser = ArgumentParser()
-    # parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "longterm"],help='running modules')
-    parser.add_argument('--modules', type=list, default=["falldown"],help='running modules')
+    parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "longterm"],help='running modules')
+    # parser.add_argument('--modules', type=list, default=[],help='running modules')
     parser.add_argument('--test', type=str, default='test',help='test')
     parser.add_argument('--nas_path', type=str, default= "/System_Integration/_Output/NAS", help='NAS path'),
     parser.add_argument('--img-size', type=int, default=1080, help='inference size (pixels)') # 480 -> 1080 수정완료.
@@ -127,7 +127,17 @@ def get_sort_args():
 def get_debug_args():
     parser = ArgumentParser("DEBUG")
     parser.add_argument("--debug", type=bool, default=True)
-    parser.add_argument("--visualize", type=bool, default=False)
+    parser.add_argument("--visualize", type=bool, default=True)
+    # parser.add_argument("--source", type=str, default="_Input/videos/mhn_demo_1.mp4")
+    parser.add_argument("--source", type=str, default="_Input/videos/rader_rgb_demo.mp4")
+    parser.add_argument("--cctv_id", type=int, default=-1)
+    parser.add_argument("--cctv_ip", type=int, default=-1)
+    parser.add_argument("--cctv_name", type=int, default=-1)
+    parser.add_argument("--thermal_ip", type=str, default="")
+    parser.add_argument("--thermal_port", type=int, default=10603)
+    parser.add_argument("--rader_ip", type=str, default="")
+    parser.add_argument("--rader_data", type=str, default="_Input/data/rader_data.json")
+
     args = parser.parse_args()
     return args
 
