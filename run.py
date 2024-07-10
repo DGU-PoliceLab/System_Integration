@@ -12,6 +12,9 @@ import numpy as np
 import time
 import json
 from datetime import datetime
+import atexit
+
+
 from _Tracker.BoTSORT.tracker.bot_sort import BoTSORT
 from _DB.db_controller import connect_db, insert_event, insert_realtime
 from _DB.mq_controller import connect_mq
@@ -31,6 +34,9 @@ from _HAR.HRI.emotion import Emotion
 from _HAR.MHNCITY.violence.violence import Violence
 from variable import get_root_args, get_sort_args, get_scale_args, get_debug_args
 from rtmo import get_model
+
+
+
 
 def wait_subprocess_ready(name, pipe, logger):
     while True:
@@ -181,7 +187,24 @@ def main():
         for i in range(scale_args.violence):
             wait_subprocess_ready("Violence", violence_pipe_list[i][0], logger)
 
-
+    # 종료 함수
+    def shut_down():
+        print("ShutDown!")
+        if 'selfharm' in args.modules:
+            for p in selfharm_pipe_list:
+                p[0].send("end_flag")
+        if 'falldown' in args.modules:
+            for p in falldown_pipe_list:
+                p[0].send("end_flag")
+        if 'emotion' in args.modules:
+            for p in emotion_pipe_list:
+                p[0].send("end_flag")
+        if 'violence' in args.modules:
+            for p in violence_pipe_list:
+                p[0].send("end_flag")
+        event_process.kill()
+    atexit.register(shut_down)
+    
     # 사람 감지 및 추적
     while cap.isOpened():
         ret, frame = cap.read()
@@ -228,15 +251,15 @@ def main():
                 meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} 
 
             # 모듈로 데이터 전송
-            # if 'selfharm' in args.modules and 0 < scale_args.selfharm:
-            #     selfharm_pipe_list[num_frame % scale_args.selfharm][0].send([tracks, meta_data])
-            # if 'falldown' in args.modules and 0 < scale_args.falldown:
-            #     falldown_pipe_list[num_frame % scale_args.falldown][0].send([tracks, meta_data])
+            if 'selfharm' in args.modules and 0 < scale_args.selfharm:
+                selfharm_pipe_list[num_frame % scale_args.selfharm][0].send([tracks, meta_data])
+            if 'falldown' in args.modules and 0 < scale_args.falldown:
+                falldown_pipe_list[num_frame % scale_args.falldown][0].send([tracks, meta_data])
             if num_frame % fps == 0:
                 if 'emotion' in args.modules and 0 < scale_args.emotion:
                     emotion_pipe_list[num_frame % scale_args.emotion][0].send([tracks, meta_data, face_detections, frame])
-            # if 'violence' in args.modules and 0 < scale_args.violence:
-                # violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])
+            if 'violence' in args.modules and 0 < scale_args.violence:
+                violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])
 
             if debug_args.visualize:
                 out.write(draw_frame)
@@ -249,20 +272,6 @@ def main():
     cap.release()
 
     logger.warning("Main process end.")
-
-    if 'selfharm' in args.modules:
-        for p in selfharm_pipe_list:
-            p[0].send("end_flag")
-    if 'falldown' in args.modules:
-        for p in falldown_pipe_list:
-            p[0].send("end_flag")
-    if 'emotion' in args.modules:
-        for p in emotion_pipe_list:
-            p[0].send("end_flag")
-    if 'violence' in args.modules:
-        for p in violence_pipe_list:
-            p[0].send("end_flag")
-    event_process.kill()
 
 if __name__ == '__main__':
     main()
