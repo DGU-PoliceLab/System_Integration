@@ -19,7 +19,7 @@ def preprocess(skeletons, frame_step):
 
     return np.array(skeletons)
 
-def check_falldown(action_name='Normal', confidence=0, threshold=0.6):
+def check_event(action_name='Normal', confidence=0, threshold=0.6):
     if action_name == 'Fall Down' and threshold < confidence:
         return True
     return False   
@@ -30,7 +30,7 @@ def Falldown(data_pipe, event_pipe):
     debug_args = get_debug_args()
     if args.longterm_status:
         longterm_input_pipe, longterm_output_pipe = Pipe()
-        longterm_process = Process(target=Longterm, args=(longterm_output_pipe, event_pipe,)) # event_pipe는 원래 event_input_pipe였는데, Falldown함수에서 사용하는 이름을 맞춤.
+        longterm_process = Process(target=Longterm, args=(longterm_output_pipe, event_pipe,)) 
         longterm_process.start()
     if debug_args.visualize:
         frame_pipe, frame_pipe_child = Pipe()
@@ -39,6 +39,7 @@ def Falldown(data_pipe, event_pipe):
         frame_pipe.recv()
     action_model = TSSTG()
     data_pipe.send(True)
+    
     while True:
         action_name = 'None'
         confidence = 0
@@ -65,8 +66,7 @@ def Falldown(data_pipe, event_pipe):
                 action_name = action_model.class_names[out[0].argmax()]
                 confidence = out[0][1]
             
-            if check_falldown(action_name=action_name, confidence=confidence, threshold=args.threshhold):
-                tid = 1
+            if check_event(action_name=action_name, confidence=confidence, threshold=args.threshhold):
                 logger.info("action: falldown")
                 event_pipe.send({'action': "falldown", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime']})
                 if args.longterm_status:

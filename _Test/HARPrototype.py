@@ -9,7 +9,7 @@ class HARPrototype():
     def update(self):
         pass
 
-    def check_falldown(self):
+    def check_event(self):
         pass
 
     def preprocess(self):

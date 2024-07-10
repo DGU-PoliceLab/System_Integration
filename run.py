@@ -29,7 +29,6 @@ from _HAR.PLASS.selfharm import Selfharm
 from _HAR.CSDC.falldown import Falldown
 from _HAR.HRI.emotion import Emotion
 from _HAR.MHNCITY.violence.violence import Violence
-# from _HAR.MHNCITY.longterm.longterm import Longterm
 from variable import get_root_args, get_sort_args, get_scale_args, get_debug_args
 from rtmo import get_model
 
@@ -80,8 +79,6 @@ def main():
         for _ in range(scale_args.violence):
             violence_input_pipe, violence_output_pipe = Pipe()
             violence_pipe_list.append((violence_input_pipe, violence_output_pipe))
-    # if 'longterm' in args.modules:
-    #     longterm_input_pipe, longterm_output_pipe = Pipe()
 
     # 이벤트 처리를 위한 수집을 위한 파이프라인 생성
     event_input_pipe, event_output_pipe = Pipe()
@@ -112,9 +109,6 @@ def main():
             violence_process = Process(target=Violence, args=(violence_pipe_list[i][1], event_input_pipe,), name=f"Violence_Process_{i}")
             process_list.append(violence_process)
             violence_process.start()
-    # if 'longterm' in args.modules:
-    #     longterm_process = Process(target=Longterm, args=(longterm_output_pipe, event_input_pipe,))
-    #     longterm_process.start()
 
     # 디버그 모드
     if debug_args.debug == True:
@@ -186,8 +180,7 @@ def main():
     if 'violence' in args.modules:
         for i in range(scale_args.violence):
             wait_subprocess_ready("Violence", violence_pipe_list[i][0], logger)
-    # if 'longterm' in args.modules:
-    #     wait_subprocess_ready("Longterm", longterm_input_pipe, logger)
+
 
     # 사람 감지 및 추적
     while cap.isOpened():
@@ -204,7 +197,7 @@ def main():
                 pred = _['predictions'][0]
                 l_p = len(pred)
                 logger.info(f'frame #{num_frame} pose_results- {l_p} person detect!')
-                n_person = 1
+
                 pred.sort(key = lambda x: x['bbox'][0][0])
 
                 for p in pred:
@@ -213,62 +206,37 @@ def main():
                     detection = [*p['bbox'][0], p['bbox_score']]
                     detections.append(detection)
                     skeletons.append([a + [b] for a, b in zip(keypoints, keypoints_scores)])
-                    if debug_args.visualize:
-                        draw_frame = draw_bbox_skeleton.draw(draw_frame, n_person, detection, keypoints)
-                    n_person += 1   
             
             detections = np.array(detections, dtype=np.float32)
             skeletons = np.array(skeletons, dtype=np.float32)
             online_targets = tracker.update(detections, skeletons, frame)
             if num_frame % fps == 0:
                 face_detections = face_detector.detect(frame)
-            # if debug_args.rader:
-            #     # if num_frame % fps == 0:
-            #     #     face_detections = face_detector.detect(frame)
-            #     #     temperature = Thermal(thermal_info, frame, face_detections)
-            #     if num_frame < len(rader_data):
-            #         cur_rader_data = rader_data[num_frame]
-            #         vital_data = cur_rader_data["vital_info"]
-            #         target_data = []
-            #         for track in online_targets:
-            #             tid = track.track_id
-            #             x1, y1, x2, y2 = track.tlbr
-            #             target_data.append({"id": tid, "range": [x1, x2, y1, y2]})
-
-            #         for vital in vital_data:
-            #             pos, depth = vital["pos"]
-            #             heartbeat_rate = vital["heartbeat_rate"]
-            #             breath_rate = vital["breath_rate"]
-            #             offset = (int(pos) + 200) / 400 * int(w)
-            #             for target in target_data:
-            #                 tid = target["id"]
-            #                 pos_range = target["range"]
-            #                 if offset >= pos_range[0] and offset <= pos_range[1]:
-            #                     logger.info(f"tid:{tid}, heartbeat_rate: {heartbeat_rate}, breath_rate: {breath_rate}")
-            #                     if debug_args.visualize:
-            #                         draw_frame = draw_vital.draw(draw_frame, int(pos_range[0]), int(pos_range[2]), heartbeat_rate, breath_rate)
                                     
-            tracks = online_targets # 모듈로 전달할 감지 결과
+            tracks = online_targets
+
+            if debug_args.visualize:
+                for i, track in enumerate(tracks):
+                    skeletons = track.skeletons
+                    detection = track.tlbr
+                    tid = track.track_id                    
+                    draw_frame = draw_bbox_skeleton.draw(draw_frame, tid, detection, skeletons[-1])
             
             if debug_args.visualize:
-                meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame} # 모듈로 전달할 메타데이터
+                meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame}
             else:
-                meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} # 모듈로 전달할 메타데이터
-            input_data = [tracks, meta_data] # 모듈로 전달할 데이터
-            e_input_data = [frame, face_detections, meta_data]
-            
+                meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} 
+
             # 모듈로 데이터 전송
-            if 'selfharm' in args.modules:
-                selfharm_pipe_list[num_frame % scale_args.selfharm][0].send(input_data)
-            if 'falldown' in args.modules:
-                falldown_pipe_list[num_frame % scale_args.falldown][0].send(input_data)
+            # if 'selfharm' in args.modules and 0 < scale_args.selfharm:
+            #     selfharm_pipe_list[num_frame % scale_args.selfharm][0].send([tracks, meta_data])
+            # if 'falldown' in args.modules and 0 < scale_args.falldown:
+            #     falldown_pipe_list[num_frame % scale_args.falldown][0].send([tracks, meta_data])
             if num_frame % fps == 0:
-                if 'emotion' in args.modules:
-                    emotion_pipe_list[num_frame % scale_args.emotion][0].send(e_input_data)
-            if 'violence' in args.modules:
-                violence_pipe_list[num_frame % scale_args.violence][0].send(input_data)
-            # if 'longterm' in args.modules:
-            #     longterm_input_pipe.send(input_data)
+                if 'emotion' in args.modules and 0 < scale_args.emotion:
+                    emotion_pipe_list[num_frame % scale_args.emotion][0].send([tracks, meta_data, face_detections, frame])
+            # if 'violence' in args.modules and 0 < scale_args.violence:
+                # violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])
 
             if debug_args.visualize:
                 out.write(draw_frame)
@@ -294,7 +262,6 @@ def main():
     if 'violence' in args.modules:
         for p in violence_pipe_list:
             p[0].send("end_flag")
-
     event_process.kill()
 
 if __name__ == '__main__':
