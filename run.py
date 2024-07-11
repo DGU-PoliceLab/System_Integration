@@ -240,10 +240,8 @@ def main():
                 face_detections = face_detector.detect(frame)
 
             if debug_args.rader:
-                if num_frame % fps == 0:
-                    
-                    face_detections = face_detector.detect(frame)
-                    temperature = Thermal(thermal_info, frame, face_detections)
+                # if num_frame % fps == 0:                   
+                    # temperature = Thermal(thermal_info, frame, face_detections)
 
                 if num_frame < len(rader_data):
                     cur_rader_data = rader_data[num_frame]
@@ -258,15 +256,14 @@ def main():
                         pos, depth = vital["pos"]
                         heartbeat_rate = vital["heartbeat_rate"]
                         breath_rate = vital["breath_rate"]
-                        offset = (int(pos) + 200) / 400 * int(w)
+                        offset = (int(pos) + 200) / 400 * int(w) # TODO 하드코딩 제거
                         for target in target_data:
                             tid = target["id"]
                             pos_range = target["range"]
                             if offset >= pos_range[0] and offset <= pos_range[1]:
-                                logger.info(f"tid:{tid}, heartbeat_rate: {heartbeat_rate}, breath_rate: {breath_rate}")
+                                # logger.info(f"tid:{tid}, heartbeat_rate: {heartbeat_rate}, breath_rate: {breath_rate}")
                                 if debug_args.visualize:
                                     draw_frame = draw_vital.draw(draw_frame, int(pos_range[0]), int(pos_range[2]), heartbeat_rate, breath_rate)
-
 
             tracks = online_targets
 

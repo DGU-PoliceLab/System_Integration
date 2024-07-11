@@ -12,6 +12,17 @@ from multiprocessing import Process, Pipe
 from _Utils._visualize import visualize, visualize_with_img
 import cv2
 
+
+def map_emotion_to_index(emotion):
+    if emotion == 'NE':
+        return 0
+    elif emotion == 'NEG-1':
+        return 1
+    elif emotion == 'NEG-2':
+        return 2
+    else:
+        return -1  # 알 수 없는 경우에 대한 처리
+    
 def Emotion(data_pipe, event_pipe):
     logger = get_logger(name="[HRI]", console=True, file=False)
     args = get_emotion_args()
@@ -31,12 +42,6 @@ def Emotion(data_pipe, event_pipe):
     model.load_state_dict(torch.load(args.model_state))
     model.eval()
    
-    # if debug_args.visualize:
-    #     frame_pipe, frame_pipe_child = Pipe()
-    #     visualize_process = Process(target=visualize, args=('face', frame_pipe_child))
-    #     visualize_process.start()
-    #     frame_pipe.recv()
-
     data_pipe.send(True)
     while True:        
         data = data_pipe.recv()
@@ -105,6 +110,3 @@ def Emotion(data_pipe, event_pipe):
                 visualize_with_img(dir_name="face", file_name=f"face_{num_frame}", frame=meta_data['frame'])
         else:
             time.sleep(0.0001)
-
-if __name__ == '__main__':
-    Emotion()

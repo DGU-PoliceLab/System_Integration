@@ -166,3 +166,4 @@ cython_debug/
 *.pth
 *.avi
 _Output/*.mp4
+_Output
