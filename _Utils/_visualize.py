@@ -23,3 +23,19 @@ def visualize(target, pipe):
         out.release()
 
 
+import copy
+import os
+def visualize_with_img(frame, data=None, dir_name="", file_name="", res=(1920, 1080)):
+    now = datetime.now()
+    timestamp = str(now).replace(" ", "").replace(":",";")
+
+    img = copy.deepcopy(frame)
+    
+    path = f"/System_Integration/_Output/{dir_name}"
+    os.makedirs(f"/System_Integration/_Output/{dir_name}", exist_ok=True)
+
+    if data:
+        draw_frame, action, score = data
+        img = draw(draw_frame, action, score)
+
+    cv2.imwrite(os.path.join(path, f"{file_name}_{timestamp}.png"), img)

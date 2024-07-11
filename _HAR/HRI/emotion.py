@@ -9,7 +9,7 @@ from collections import Counter
 from _Utils.logger import get_logger
 from variable import get_emotion_args, get_debug_args
 from multiprocessing import Process, Pipe
-from _Utils._visualize import visualize
+from _Utils._visualize import visualize, visualize_with_img
 import cv2
 
 def Emotion(data_pipe, event_pipe):
@@ -100,10 +100,9 @@ def Emotion(data_pipe, event_pipe):
                             ret_string = f'frame: {num_frame}    id: {tid}  action: {emotion}'
 
                             cv2.putText(meta_data['frame'], ret_string, (350, 40*event_count), font, 2, (255, 0, 0), 2, cv2.LINE_AA)
-                            # cv2.imwrite(f"face_{num_frame}_{tid}.png", face_img)
-                   
+                  
             if debug_args.visualize:
-                cv2.imwrite(f"face_{num_frame}.png", meta_data['frame'])
+                visualize_with_img(dir_name="face", file_name=f"face_{num_frame}", frame=meta_data['frame'])
         else:
             time.sleep(0.0001)
 
