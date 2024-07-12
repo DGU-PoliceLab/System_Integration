@@ -18,7 +18,7 @@ def get_arg(category = None, arg= None):
 
 def get_root_args():
     parser = ArgumentParser()
-    parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion"],help='running modules')
+    parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "longterm"],help='running modules')
     # parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "snapshot", "violence", "thermal"],help='running modules')
 
     parser.add_argument('--test', type=str, default='test',help='test')
@@ -75,8 +75,9 @@ def get_root_args():
 def get_debug_args():
     parser = ArgumentParser("DEBUG")
     parser.add_argument("--debug", type=bool, default=True)
-    parser.add_argument("--visualize", type=bool, default=False)
-    parser.add_argument("--source", type=str, default="_Input/videos/mhn_demo_1.mp4")
+    parser.add_argument("--visualize", type=bool, default=True)
+    parser.add_argument("--source", type=str, default="_Input/videos/long_term_test_1.mp4")
+    parser.add_argument("--output", type=str, default="_Output")
     parser.add_argument("--cctv_id", type=int, default=-1)
     parser.add_argument("--cctv_ip", type=int, default=-1)
     parser.add_argument("--cctv_name", type=int, default=-1)
@@ -91,9 +92,9 @@ def get_debug_args():
 def get_scale_args():
     parser = ArgumentParser("SCALE")
     parser.add_argument("--selfharm", type=int, default=4)
-    parser.add_argument("--falldown", type=int, default=2)
+    parser.add_argument("--falldown", type=int, default=1)
     parser.add_argument("--emotion", type=int, default=1)
-    parser.add_argument("--violence", type=int, default=1)
+    parser.add_argument("--violence", type=int, default=0)
     args = parser.parse_args()
     return args
 
