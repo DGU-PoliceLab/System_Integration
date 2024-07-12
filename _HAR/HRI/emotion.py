@@ -7,9 +7,9 @@ from facial_emotion import MTNet, get_model_path
 from PIL import Image
 from collections import Counter
 from _Utils.logger import get_logger
+from _Utils._visualize import Visualizer
 from variable import get_emotion_args, get_debug_args
 from multiprocessing import Process, Pipe
-from _Utils._visualize import visualize, visualize_with_img
 import cv2
 
 
@@ -27,6 +27,9 @@ def Emotion(data_pipe, event_pipe):
     logger = get_logger(name="[HRI]", console=True, file=False)
     args = get_emotion_args()
     debug_args = get_debug_args()
+    if debug_args.visualize:
+        visualizer = Visualizer("emotion")
+        init_flag = True
     use_transforms = transforms.Compose(
         [
             transforms.Resize((260,260)),
@@ -48,6 +51,8 @@ def Emotion(data_pipe, event_pipe):
         if data:
             if data == "end_flag":
                 logger.warning("Emotion process end.")
+                if debug_args.visualize:    
+                    visualizer.merge_img_to_video()
                 break
             tracks, meta_data, face_detections, frame = data
             
@@ -107,6 +112,9 @@ def Emotion(data_pipe, event_pipe):
                             cv2.putText(meta_data['frame'], ret_string, (350, 40*event_count), font, 2, (255, 0, 0), 2, cv2.LINE_AA)
                   
             if debug_args.visualize:
-                visualize_with_img(dir_name="face", file_name=f"face_{num_frame}", frame=meta_data['frame'])
+                if init_flag == True:
+                    visualizer.mkdir(meta_data['timestamp'])
+                    init_flag = False
+                visualizer.save_temp_image([meta_data["frame"], None, None], meta_data["num_frame"])
         else:
             time.sleep(0.0001)

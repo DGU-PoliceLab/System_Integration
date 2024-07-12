@@ -4,6 +4,7 @@ sys.path.insert(0, "/System_Integration/_PoseEstimation/mmlab")
 sys.path.insert(0, "/System_Integration/_Tracker")
 sys.path.insert(0, "/System_Integration/_HAR")
 sys.path.insert(0, "/System_Integration/_MOT")
+import os
 import copy
 from multiprocessing import Process, Queue, Pipe
 import cv2
@@ -154,7 +155,7 @@ def main():
 
     # 동영상 관련 설정
     now = datetime.now()
-    timestamp = str(now).replace(" ", "").replace(":",";")
+    timestamp = str(now).replace(" ", "").replace(":", "-").replace(".", "-")
     cap = cv2.VideoCapture(source)
     fourcc = cv2.VideoWriter_fourcc('M','P','4','V')
     fps = 30
@@ -166,8 +167,10 @@ def main():
     tracker = BoTSORT(bot_sort_args, fps)
 
     # 디버그(시각화, 동영상 저장) 
-    if debug_args.visualize:    
-        out = cv2.VideoWriter(f'/System_Integration/_Output/video_clip_{timestamp}.mp4', fourcc, fps, (int(w), int(h))) 
+    if debug_args.visualize:
+        output_path = f"{debug_args.output}/{timestamp}"
+        os.mkdir(output_path)
+        out = cv2.VideoWriter(f'{output_path}/run.mp4', fourcc, fps, (int(w), int(h))) 
 
     # _HAR 모듈 실행 대기
     if 'selfharm' in args.modules:
@@ -252,7 +255,7 @@ def main():
                         x1, y1, x2, y2 = track.tlbr
                         target_data.append({"id": tid, "range": [x1, x2, y1, y2]})
 
-                    for vital in vital_data:
+                    for vital in vital_data: 
                         pos, depth = vital["pos"]
                         heartbeat_rate = vital["heartbeat_rate"]
                         breath_rate = vital["breath_rate"]
@@ -275,7 +278,7 @@ def main():
                     draw_frame = draw_bbox_skeleton.draw(draw_frame, tid, detection, skeletons[-1])
             
             if debug_args.visualize:
-                meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame}
+                meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'timestamp': timestamp, 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame}
             else:
                 meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} 
 
@@ -289,7 +292,6 @@ def main():
                     emotion_pipe_list[num_frame % scale_args.emotion][0].send([tracks, meta_data, face_detections, frame])
             if 'violence' in args.modules and 0 < scale_args.violence:
                 violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])
-
             if debug_args.visualize:
                 out.write(draw_frame)
 
@@ -299,6 +301,7 @@ def main():
     if debug_args.visualize:
         out.release()
     cap.release()
+    shut_down()
 
     logger.warning("Main process end.")
 

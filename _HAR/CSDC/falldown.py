@@ -6,7 +6,7 @@ from copy import deepcopy
 from CSDC.ActionsEstLoader import TSSTG
 from _HAR.MHNCITY.longterm.longterm import Longterm
 from _Utils.logger import get_logger
-from _Utils._visualize import visualize
+from _Utils._visualize import Visualizer
 from variable import get_falldown_args, get_debug_args
 
 def preprocess(skeletons, frame_step):
@@ -28,15 +28,13 @@ def Falldown(data_pipe, event_pipe):
     logger = get_logger(name="[CSDC]", console=True, file=False)
     args = get_falldown_args()
     debug_args = get_debug_args()
+    if debug_args.visualize:
+        visualizer = Visualizer("falldown")
+        init_flag = True
     if args.longterm_status:
         longterm_input_pipe, longterm_output_pipe = Pipe()
         longterm_process = Process(target=Longterm, args=(longterm_output_pipe, event_pipe,)) 
         longterm_process.start()
-    if debug_args.visualize:
-        frame_pipe, frame_pipe_child = Pipe()
-        visualize_process = Process(target=visualize, args=('falldown', frame_pipe_child))
-        visualize_process.start()
-        frame_pipe.recv()
     action_model = TSSTG()
     data_pipe.send(True)
     
@@ -49,6 +47,8 @@ def Falldown(data_pipe, event_pipe):
                 logger.warning("Falldown process end.")
                 if args.longterm_status:
                     longterm_input_pipe.send("end_flag")
+                if debug_args.visualize:    
+                    visualizer.merge_img_to_video()
                 break
             tracks, meta_data = data
             if args.longterm_status:
@@ -75,6 +75,9 @@ def Falldown(data_pipe, event_pipe):
                     longterm_input_pipe.send(longterm_input_data)
 
             if debug_args.visualize:
-                frame_pipe.send([meta_data['frame'], action_name, confidence])
+                if init_flag == True:
+                    visualizer.mkdir(meta_data['timestamp'])
+                    init_flag = False
+                visualizer.save_temp_image([meta_data["frame"], action_name, confidence], meta_data["num_frame"])
         else:
             time.sleep(0.0001)
