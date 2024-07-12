@@ -280,16 +280,19 @@ def main():
                 meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} 
 
             # 모듈로 데이터 전송
+            print("checkpoint 1")
             if 'selfharm' in args.modules and 0 < scale_args.selfharm:
                 selfharm_pipe_list[num_frame % scale_args.selfharm][0].send([tracks, meta_data])
+            print("checkpoint 2")
             if 'falldown' in args.modules and 0 < scale_args.falldown:
                 falldown_pipe_list[num_frame % scale_args.falldown][0].send([tracks, meta_data])
+            print("checkpoint 3")
             if num_frame % fps == 0:
                 if 'emotion' in args.modules and 0 < scale_args.emotion:
                     emotion_pipe_list[num_frame % scale_args.emotion][0].send([tracks, meta_data, face_detections, frame])
+            print("checkpoint 4")
             if 'violence' in args.modules and 0 < scale_args.violence:
                 violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])
-
             if debug_args.visualize:
                 out.write(draw_frame)
 
