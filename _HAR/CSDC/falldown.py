@@ -6,7 +6,7 @@ from copy import deepcopy
 from CSDC.ActionsEstLoader import TSSTG
 from _HAR.MHNCITY.longterm.longterm import Longterm
 from _Utils.logger import get_logger
-from _Utils._visualize import visualize
+from _Utils._visualize import Visualizer
 from variable import get_falldown_args, get_debug_args
 
 def preprocess(skeletons, frame_step):
@@ -19,7 +19,7 @@ def preprocess(skeletons, frame_step):
 
     return np.array(skeletons)
 
-def check_falldown(action_name='Normal', confidence=0, threshold=0.6):
+def check_event(action_name='Normal', confidence=0, threshold=0.6):
     if action_name == 'Fall Down' and threshold < confidence:
         return True
     return False   
@@ -28,17 +28,16 @@ def Falldown(data_pipe, event_pipe):
     logger = get_logger(name="[CSDC]", console=True, file=False)
     args = get_falldown_args()
     debug_args = get_debug_args()
+    if debug_args.visualize:
+        visualizer = Visualizer("falldown")
+        init_flag = True
     if args.longterm_status:
         longterm_input_pipe, longterm_output_pipe = Pipe()
-        longterm_process = Process(target=Longterm, args=(longterm_output_pipe, event_pipe,)) # event_pipe는 원래 event_input_pipe였는데, Falldown함수에서 사용하는 이름을 맞춤.
+        longterm_process = Process(target=Longterm, args=(longterm_output_pipe, event_pipe,)) 
         longterm_process.start()
-    if debug_args.visualize:
-        frame_pipe, frame_pipe_child = Pipe()
-        visualize_process = Process(target=visualize, args=('falldown', frame_pipe_child))
-        visualize_process.start()
-        frame_pipe.recv()
     action_model = TSSTG()
     data_pipe.send(True)
+    
     while True:
         action_name = 'None'
         confidence = 0
@@ -48,6 +47,8 @@ def Falldown(data_pipe, event_pipe):
                 logger.warning("Falldown process end.")
                 if args.longterm_status:
                     longterm_input_pipe.send("end_flag")
+                if debug_args.visualize:    
+                    visualizer.merge_img_to_video()
                 break
             tracks, meta_data = data
             if args.longterm_status:
@@ -65,14 +66,18 @@ def Falldown(data_pipe, event_pipe):
                 action_name = action_model.class_names[out[0].argmax()]
                 confidence = out[0][1]
             
-            if check_falldown(action_name=action_name, confidence=confidence, threshold=args.threshhold):
-                tid = 1
+            if check_event(action_name=action_name, confidence=confidence, threshold=args.threshhold):
                 logger.info("action: falldown")
-                event_pipe.send({'action': "falldown", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime']})
+                event_pipe.send({'action': "falldown", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name']})
+
+
                 if args.longterm_status:
                     longterm_input_pipe.send(longterm_input_data)
 
             if debug_args.visualize:
-                frame_pipe.send([meta_data['frame'], action_name, confidence])
+                if init_flag == True:
+                    visualizer.mkdir(meta_data['timestamp'])
+                    init_flag = False
+                visualizer.save_temp_image([meta_data["frame"], action_name, confidence], meta_data["num_frame"])
         else:
             time.sleep(0.0001)

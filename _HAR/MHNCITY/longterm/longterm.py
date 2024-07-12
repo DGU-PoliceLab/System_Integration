@@ -4,7 +4,8 @@ sys.path.insert(0, '/System_Integration/_HAR/MHNCITY/longterm')
 import numpy as np
 import time
 from _Utils.logger import get_logger
-from variable import get_longterm_args
+from _Utils._visualize import Visualizer
+from variable import get_longterm_args, get_debug_args
 
 # (동일한 이미지)long_term_demo_0.mp4에 대해 (최소 0.1, 최대 3.5, 평균 1.7)
 # (앉은 자세 유지)long_term_demo_1.mp4에 대해 (최소 0.0, 최대 18.5, 평균 1.7)
@@ -20,10 +21,15 @@ def check_longterm(confidence, threshhold):
 def Longterm(data_pipe, event_pipe):
     logger = get_logger(name="[MhnCity.Longterm]", console=True, file=True)
     args = get_longterm_args()
+    debug_args = get_debug_args()
+    if debug_args.visualize:
+        visualizer = Visualizer("longterm")
+        init_flag = True
     hold_frames = [[] for x in range(args.max_person)]
     count = [0 for x in range(args.max_person)]
     data_pipe.send(True)
     while True:
+        event = ['normal', 1.0]
         data = data_pipe.recv()
         if data:
             if data == "end_flag":
@@ -55,11 +61,21 @@ def Longterm(data_pipe, event_pipe):
                     confidence = similarity/(args.fps * args.hold_time)
                     if confidence < args.threshhold:
                         count[i] += 1
+                        event[0] = 'normal'
+                        event[1] = str(count)
                     else:
                         count[i] = 0
+                        event[0] = 'longterm(counting)'
+                        event[1] = str(count)
             for i, c in enumerate(count):
                 if c > args.hold_time * args.fps:
+                    event[0] = 'longterm(detect)'
                     logger.info(f"action: longterm, tid: {i}")
                     count[i] = 0
+            if debug_args.visualize:
+                if init_flag == True:
+                    visualizer.mkdir(meta_data['timestamp'])
+                    init_flag = False
+                visualizer.save_temp_image([meta_data["frame"], event[0], event[1]], meta_data["num_frame"])
         else:
             time.sleep(0.0001)

@@ -1,4 +1,5 @@
 import sys
+import time
 sys.path.insert(0, '/System_Integration/_HAR/HRI')
 import torch
 from torchvision import transforms
@@ -6,17 +7,29 @@ from facial_emotion import MTNet, get_model_path
 from PIL import Image
 from collections import Counter
 from _Utils.logger import get_logger
+from _Utils._visualize import Visualizer
 from variable import get_emotion_args, get_debug_args
+from multiprocessing import Process, Pipe
+import cv2
 
-def print_most_common_label(emotions, logger):
-    common_label = Counter(emotions).most_common(1)[0][0]
-    logger.info(f"emotion Label: {common_label}")
-    return common_label
 
+def map_emotion_to_index(emotion):
+    if emotion == 'NE':
+        return 0
+    elif emotion == 'NEG-1':
+        return 1
+    elif emotion == 'NEG-2':
+        return 2
+    else:
+        return -1  # 알 수 없는 경우에 대한 처리
+    
 def Emotion(data_pipe, event_pipe):
     logger = get_logger(name="[HRI]", console=True, file=False)
     args = get_emotion_args()
     debug_args = get_debug_args()
+    if debug_args.visualize:
+        visualizer = Visualizer("emotion")
+        init_flag = True
     use_transforms = transforms.Compose(
         [
             transforms.Resize((260,260)),
@@ -31,34 +44,77 @@ def Emotion(data_pipe, event_pipe):
     model = MTNet(num_emotion, num_race=6, num_sex=2).to(args.device)
     model.load_state_dict(torch.load(args.model_state))
     model.eval()
-
-    emotions_list = []
-    frame_rate = 30
+   
     data_pipe.send(True)
-    while True:
-        
+    while True:        
         data = data_pipe.recv()
         if data:
             if data == "end_flag":
                 logger.warning("Emotion process end.")
+                if debug_args.visualize:    
+                    visualizer.merge_img_to_video()
                 break
-            frame, detections, meta_data = data
-            if frame is not None:
-                for i in range(detections.shape[0]):
-                    x1,y1,x2,y2=detections[i][0:4]
-                    x1 = int(x1)
-                    y1 = int(y1)
-                    x2 = int(x2)
-                    y2 = int(y2)
-                    face_img=frame[y1:y2,x1:x2,:]
-                    face_img2 = use_transforms(Image.fromarray(face_img).convert('RGB')).unsqueeze(0).to(args.device)
-                    e_out, i_out, _ = model(face_img2)
-                    emotion = emotion_to_class[torch.argmax(e_out).item()]
-                    emotions_list.append(emotion)
-                if len(emotions_list) >= frame_rate:
-                    common_label = print_most_common_label(emotions_list, logger)
-                    event_pipe.send({'action': common_label, 'id':1, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime']})
-                    emotions_list = []
+            tracks, meta_data, face_detections, frame = data
+            
+            event_count = 0
+            for i, track in enumerate(tracks):
+                bbox = track.tlbr
+                tid = track.track_id
+                num_frame = meta_data['num_frame']
 
-if __name__ == '__main__':
-    Emotion()
+                if face_detections is not None:
+                    for i in range(face_detections.shape[0]):
+                        hbox = face_detections[i][0:4]
+
+                        def check_hbox(bbox, hbox):
+                            bx1 = int(bbox[0])
+                            by1 = int(bbox[1])
+                            bx2 = int(bbox[2])
+                            by2 = int(bbox[3])  
+
+                            hx1 = int(hbox[0])
+                            hy1 = int(hbox[1])
+                            hx2 = int(hbox[2])
+                            hy2 = int(hbox[3])
+
+                            if bx1 <= hx1 and by1 <= hy1 and bx2 >= hx2 and by2 >= hy2:
+                                return True
+                            else:
+                                return False
+
+                        if check_hbox(bbox=bbox, hbox=hbox) == False:
+                            continue
+
+                        fx1 = int(hbox[0])
+                        fy1 = int(hbox[1])
+                        fx2 = int(hbox[2])
+                        fy2 = int(hbox[3])
+
+                        face_img = frame[fy1:fy2, fx1:fx2, :]                    
+                        face_img_transformed = use_transforms(Image.fromarray(face_img).convert('RGB')).unsqueeze(0).to(args.device)
+                        e_out, _, _ = model(face_img_transformed)
+                        predicted_emotion = torch.argmax(e_out).item()
+                        emotion = emotion_to_class[predicted_emotion]
+                        
+                        logger.info(f"emotion Label: {emotion}")
+                        event_pipe.send({'action': emotion, 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime']})
+                        event_count += 1
+
+                        if debug_args.visualize:
+                            hx1 = int(hbox[0])
+                            hy1 = int(hbox[1])
+                            hx2 = int(hbox[2])
+                            hy2 = int(hbox[3])
+                            cv2.rectangle(meta_data['frame'], (hx1, hy1), (hx2, hy2), (255, 0, 0), 2)
+                            font =  cv2.FONT_HERSHEY_PLAIN
+                            ret_string = f'frame: {num_frame}    id: {tid}  action: {emotion}'
+
+                            cv2.putText(meta_data['frame'], ret_string, (350, 40*event_count), font, 2, (255, 0, 0), 2, cv2.LINE_AA)
+                  
+            if debug_args.visualize:
+                if init_flag == True:
+                    visualizer.mkdir(meta_data['timestamp'])
+                    init_flag = False
+                visualizer.save_temp_image([meta_data["frame"], None, None], meta_data["num_frame"])
+        else:
+            time.sleep(0.0001)

@@ -7,10 +7,10 @@ from threading import Thread
 from multiprocessing import Process, Pipe
 from mmaction.apis import inference_skeleton, init_recognizer
 from _Utils.logger import get_logger
-from _Utils._visualize import visualize
+from _Utils._visualize import Visualizer
 from variable import get_selfharm_args, get_debug_args
 
-EVENT = ["normla", 0.0]
+EVENT = ["normal", 0.0]
 
 def pre_processing(tracks):
     form = {
@@ -63,10 +63,7 @@ def Selfharm(data_pipe, event_pipe):
     args = get_selfharm_args()
     debug_args = get_debug_args()
     if debug_args.visualize:
-        frame_pipe, frame_pipe_child = Pipe()
-        visualize_process = Process(target=visualize, args=('selfharm', frame_pipe_child))
-        visualize_process.start()
-        frame_pipe.recv()
+        visualizer = Visualizer("selfharm")
     config = mmengine.Config.fromfile(args.config)
     model = init_recognizer(config, args.checkpoint, args.device)
     label_map = [x.strip() for x in open(args.label_map).readlines()]
@@ -92,6 +89,8 @@ def Selfharm(data_pipe, event_pipe):
         if data and data != prev_data:
             if data == "end_flag":
                 logger.warning("Selfharm process end.")
+                if debug_args.visualize:    
+                    visualizer.merge_img_to_video()
                 break
             tracks, meta_data = data
             prev_data = data
@@ -99,6 +98,7 @@ def Selfharm(data_pipe, event_pipe):
             pose_array.append(pose_data)
             meta_array.append(meta_data)
             if debug_args.visualize:
-                frame_pipe.send([meta_data['frame'], EVENT[0], EVENT[1]])
+                visualizer.mkdir(meta_data['timestamp'])
+                visualizer.save_temp_image([meta_data["frame"], EVENT[0], EVENT[1]], meta_data["num_frame"])
         else:
             time.sleep(0.0001)
