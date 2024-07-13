@@ -15,26 +15,26 @@ import json
 from datetime import datetime
 import atexit
 from EventHandler.EventHandler import EventHandler
-
 from _Tracker.BoTSORT.tracker.bot_sort import BoTSORT
 from _Utils.logger import get_logger
 from _Utils.head_bbox import *
-from _Utils.pipeline import *
 import _Utils.draw_bbox_skeleton as draw_bbox_skeleton 
 import _Utils.draw_vital as draw_vital
-from _Sensor.radar import radar_start
-from _Sensor.thermal import Thermal
+
+from Sensor.EdgeCam import EdgeCam, Radar, Thermal, Camera
 import _MOT.face_detection as face_detection
 from _HAR.PLASS.selfharm import Selfharm
 from _HAR.CSDC.falldown import Falldown
 from _HAR.HRI.emotion import Emotion
 from _HAR.MHNCITY.violence.violence import Violence
+
 from variable import get_root_args, get_sort_args, get_scale_args, get_debug_args
 from rtmo import get_model
 
 def main():
     # 출력 로그 설정
     logger = get_logger(name= '[RUN]', console= True, file= True)
+
     # 루트 인자 및 기타 인자 설정
     args = get_root_args()
     dict_args = vars(args)
@@ -44,10 +44,8 @@ def main():
     debug_args = get_debug_args()
     scale_args = get_scale_args()
 
-    # 멀티프로세스 환경 torch, cuda 설정
-    torch.multiprocessing.set_start_method('spawn')
-    
-    object_snapshot_control_queue = Queue()
+    # See "https://tutorials.pytorch.kr/intermediate/dist_tuto.html"
+    torch.multiprocessing.set_start_method('spawn') 
     
     # 프로세스간 데이터 전달을 위한 파이프라인 생성 (Sacle mode)
     if 'selfharm' in args.modules:
@@ -71,15 +69,11 @@ def main():
             violence_input_pipe, violence_output_pipe = Pipe()
             violence_pipe_list.append((violence_input_pipe, violence_output_pipe))
 
-    # 이벤트 처리를 위한 수집을 위한 파이프라인 생성
     event_input_pipe, event_output_pipe = Pipe()
+    event_handler = EventHandler()   
+    event_process = Process(target=event_handler.update(), args=(event_output_pipe,))
+    event_process.start()
 
-    # 이벤트 프로세스
-    # event_process = Process(target=collect_evnet, args=(event_output_pipe,))
-    # event_process.start()
-
-
-    # 모듈별 프로세스
     process_list = []
     if 'selfharm' in args.modules:
         for i in range(scale_args.selfharm):
@@ -133,9 +127,6 @@ def main():
 
         cctv_info = cctv_info[1]
         source = cctv_info['ip']
-        Process(target=object_snapshot_control, args=(object_snapshot_control_queue,)).start()
-    # CCTV 정보 출력
-    logger.info(f"cctv_info : {cctv_info}")
 
     # 사람 감지 및 추적을 위한 모델 로드
     inferencer, init_args, call_args, display_alias = get_model()
@@ -185,7 +176,6 @@ def main():
         for i in range(scale_args.violence):
             wait_subprocess_ready("Violence", violence_pipe_list[i][0], logger)
 
-    # 종료 함수
     def shut_down():
         print("ShutDown!")
         if 'selfharm' in args.modules:
@@ -200,10 +190,9 @@ def main():
         if 'violence' in args.modules:
             for p in violence_pipe_list:
                 p[0].send("end_flag")
-        # event_process.kill()
+        event_process.kill()
     atexit.register(shut_down)
     
-    # 사람 감지 및 추적
     while cap.isOpened():
         ret, frame = cap.read()
         if ret:
@@ -241,32 +230,6 @@ def main():
             if num_frame % fps == 0:
                 face_detections = face_detector.detect(frame)
 
-            if debug_args.rader:
-                # if num_frame % fps == 0:                   
-                    # temperature = Thermal(thermal_info, frame, face_detections)
-
-                if num_frame < len(rader_data):
-                    cur_rader_data = rader_data[num_frame]
-                    vital_data = cur_rader_data["vital_info"]
-                    target_data = []
-                    for track in online_targets:
-                        tid = track.track_id
-                        x1, y1, x2, y2 = track.tlbr
-                        target_data.append({"id": tid, "range": [x1, x2, y1, y2]})
-
-                    for vital in vital_data: 
-                        pos, depth = vital["pos"]
-                        heartbeat_rate = vital["heartbeat_rate"]
-                        breath_rate = vital["breath_rate"]
-                        offset = (int(pos) + 200) / 400 * int(w) # TODO 하드코딩 제거
-                        for target in target_data:
-                            tid = target["id"]
-                            pos_range = target["range"]
-                            if offset >= pos_range[0] and offset <= pos_range[1]:
-                                # logger.info(f"tid:{tid}, heartbeat_rate: {heartbeat_rate}, breath_rate: {breath_rate}")
-                                if debug_args.visualize:
-                                    draw_frame = draw_vital.draw(draw_frame, int(pos_range[0]), int(pos_range[2]), heartbeat_rate, breath_rate)
-
             tracks = online_targets
 
             if debug_args.visualize:
@@ -301,8 +264,8 @@ def main():
     if debug_args.visualize:
         out.release()
     cap.release()
-    shut_down()
 
+    shut_down()
     logger.warning("Main process end.")
 
 if __name__ == '__main__':

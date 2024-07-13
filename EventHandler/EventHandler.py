@@ -8,7 +8,6 @@ import pymysql
 import os
 import pika
 import json
-from _DB.config import mq_config as CONFIG
 import datetime
 import copy
 import cv2
@@ -33,12 +32,14 @@ logger = get_logger(name= '[EVENT]', console= True, file= True)
 
 
 class EventHandler:
-    pass
+    def __init__(self):
+        pass
 
 class DBUtil:
     def __init__(self):
         self.connect = self.connect_db()
         self.connect_pls_temp = self.connect_db(db_name="mysql-pls") # 스냅샷 쪽 인물 데이터 실시간 갱신 할 때 쓰이는 듯
+        pass
 
     def connect_db(self, db_name=None):
         if db_name == None:
@@ -51,11 +52,13 @@ class DBUtil:
                                 database=db_name,
                                 charset=CONFIG["charset"])
         return conn
+        pass
 
 
 class MQUtil:
     def __init__(self):
         self.connect = self.connect_mq()
+        pass
 
     def connect_mq(self):
         credentials = pika.PlainCredentials(username=CONFIG['user'], password=CONFIG['password'])
@@ -67,6 +70,7 @@ class MQUtil:
             return channel
         else:
             return None
+        pass
 
     def publish_message(self, message):  ## TODO! 예외처리 방식의 문제가 있음
         assert self.connect is not None, 'FUNCTION publish_message : channel object does not exist'
@@ -76,6 +80,7 @@ class MQUtil:
 
         except Exception as e:
             logger.warning(f'FUNCTION publish_message : Error occurred during message publishing, error: {e}')
+        pass
 
 
 class meg_handler:
@@ -108,9 +113,7 @@ class meg_handler:
                     print(f"event_queue.size: {event_queue.qsize()}")
                 else:
                     time.sleep(0.0001)
-
-
-
+            pass
 
 # call by run
 def object_snapshot_control(data_pipe):
@@ -195,7 +198,7 @@ def object_snapshot_control(data_pipe):
                 insert_snapshot(total_db_insert_datas, conn, mq_conn)
                 last_update_time = current_time  # Update the last update time
             total_db_insert_datas.clear()
-
+    pass
 
 
 def insert_realtime(queue, conn):
@@ -243,7 +246,7 @@ def insert_realtime(queue, conn):
     except Exception as e:
         logger.warning(f"Error occurred during real-time data insertion, error: {e}")
         conn.rollback()
-
+    pass
 
 
 def insert_snapshot(data_list, conn, mq_conn):
@@ -274,7 +277,7 @@ def insert_snapshot(data_list, conn, mq_conn):
             logger.warning(f"Error occurred on message queue, error: {e}")
     except Exception as e:
         logger.warning(f"Error occurred during insert data into database, error: {e}")
-
+    pass
 
 
 def insert_snapshot(data_list, conn, mq_conn):
@@ -304,7 +307,7 @@ def insert_snapshot(data_list, conn, mq_conn):
             logger.warning(f"Error occurred on message queue, error: {e}")
     except Exception as e:
         logger.warning(f"Error occurred during insert data into database, error: {e}")
-
+    pass
 
 
 def delete_snapshot(tid,conn, mq_conn):
@@ -327,7 +330,7 @@ def delete_snapshot(tid,conn, mq_conn):
 
     except Exception as e:
         logger.warning(f"FUNCTION delete_snapshot : Error occurred during delete(OBJECT #tid), error: {e}")
-
+    pass
 
 
 
@@ -362,11 +365,7 @@ def insert_event(event_queue, conn, mq_conn):
     while True:
         event = event_queue.get()
         if event is not None:
-            try:
-                # 이아래의 event정보들이 필요한데, 모델마다 이걸 다 추가하기보다는 데이터가 여기로 모이니까 여기에 추가했음.
-                
-
-
+            try:             
                 ##############################임시. 원래 모델에서 제공되야될 정보      
                 cctv_id = event['cctv_id']
                 event_type = event['action']
@@ -428,5 +427,5 @@ def insert_event(event_queue, conn, mq_conn):
                         update(event_type, event_cur_time) # event insert delay code use here
             except Exception as e:
                 logger.warning(f"Error occurred in insert_event loop, error: {e}")
-                pass
-
+    pass
+                
