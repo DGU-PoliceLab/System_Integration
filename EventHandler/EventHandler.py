@@ -13,17 +13,34 @@ import datetime
 import copy
 import cv2
 
+db_config = {
+    "host": "172.30.1.43",
+    "port": 3306,
+    "user": "root",
+    "password": "mhncity@364",
+    "database": "mysql-pls",
+    "charset": "utf8"
+}
+mq_config = {
+    "host": '172.30.1.43',
+    "port": 9090,
+    "user": 'mhncity',
+    "password": 'mhncity@364',
+    "exchange": 'event_exchange'
+}
+
 logger = get_logger(name= '[EVENT]', console= True, file= True)
 
+
+class EventHandler:
+    pass
 
 class DBUtil:
     def __init__(self):
         self.connect = self.connect_db()
-        self.connect_pls_temp = self.connect_db(db_name="mysql-pls") #TODO 임시
+        self.connect_pls_temp = self.connect_db(db_name="mysql-pls") # 스냅샷 쪽 인물 데이터 실시간 갱신 할 때 쓰이는 듯
 
     def connect_db(self, db_name=None):
-        # conn = connect_db("mysql-pls") # TEMP
-
         if db_name == None:
             db_name = CONFIG["database"]
 
@@ -185,6 +202,9 @@ def insert_realtime(queue, conn):
     import queue as QueueModule
     QUEUE_EMPTY_INTERVAL = 1
 
+    ### 쓰는 곳 ###
+    # insert_realtime_thread = Thread(target=insert_realtime, args=(realtime_status_queue, realtime_status_conn),daemon=False).start()
+
     # assert conn is None, 'conn object does not exist'
     assert conn is not None, 'FUNCTION insert_realtime : conn object does not exist'
     
@@ -323,7 +343,7 @@ def insert_event(event_queue, conn, mq_conn):
         tn = tl[0] * 3600 + tl[1] * 60 + tl[2]
         return tn
 
-    def check(event, cur_time):
+    def check_delay(event, cur_time):
         last_time = LAST_EVENT_TIME[event]
         if last_time == None:
             update(event, cur_time)
@@ -344,7 +364,9 @@ def insert_event(event_queue, conn, mq_conn):
         if event is not None:
             try:
                 # 이아래의 event정보들이 필요한데, 모델마다 이걸 다 추가하기보다는 데이터가 여기로 모이니까 여기에 추가했음.
-                                               
+                
+
+
                 ##############################임시. 원래 모델에서 제공되야될 정보      
                 cctv_id = event['cctv_id']
                 event_type = event['action']
@@ -365,7 +387,7 @@ def insert_event(event_queue, conn, mq_conn):
                 logger.info(f"[EVENT DETECT] - cctv_id : {cctv_id}, event_type : {event_type}, event_location : {event_location}, track_id : {track_id}, event_date : {event_date}, event_time : {event_time}, event_clip_directory : {event_clip_directory}, event_start : {event_start}, event_end : {event_end}")
                 event_cur_time = str_to_second(event_time) 
 
-                if check(event_type, event_cur_time):
+                if check_delay(event_type, event_cur_time):
                     try:
                         cur = conn.cursor()
 

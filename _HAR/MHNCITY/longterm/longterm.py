@@ -21,6 +21,9 @@ def Longterm(data_pipe, event_pipe):
     logger = get_logger(name="[MhnCity.Longterm]", console=True, file=True)
     args = get_longterm_args()
     debug_args = get_debug_args()
+
+    debug_args.visualize = False #TODO. TEMP. 해당 기능에 문제가 있어서 비활성화 시킴. !김현수 작업 요망!
+
     if debug_args.visualize:
         visualizer = Visualizer("longterm")
         init_flag = True

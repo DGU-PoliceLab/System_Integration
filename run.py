@@ -14,12 +14,9 @@ import time
 import json
 from datetime import datetime
 import atexit
+from EventHandler.EventHandler import EventHandler
 
 from _Tracker.BoTSORT.tracker.bot_sort import BoTSORT
-from _DB.db_controller import connect_db, insert_event, insert_realtime
-from _DB.mq_controller import connect_mq
-from _DB.event_controller import collect_evnet
-from _DB.snapshot_controller import object_snapshot_control
 from _Utils.logger import get_logger
 from _Utils.head_bbox import *
 from _Utils.pipeline import *
@@ -34,15 +31,6 @@ from _HAR.HRI.emotion import Emotion
 from _HAR.MHNCITY.violence.violence import Violence
 from variable import get_root_args, get_sort_args, get_scale_args, get_debug_args
 from rtmo import get_model
-
-def wait_subprocess_ready(name, pipe, logger):
-    while True:
-        logger.info(f'wating for {name} process to ready...')
-        if pipe.recv():
-            logger.info(f'{name} process ready')
-            break
-        else:
-            time.sleep(0.1)
 
 def main():
     # 출력 로그 설정
@@ -87,8 +75,9 @@ def main():
     event_input_pipe, event_output_pipe = Pipe()
 
     # 이벤트 프로세스
-    event_process = Process(target=collect_evnet, args=(event_output_pipe,))
-    event_process.start()
+    # event_process = Process(target=collect_evnet, args=(event_output_pipe,))
+    # event_process.start()
+
 
     # 모듈별 프로세스
     process_list = []
@@ -170,9 +159,19 @@ def main():
     if debug_args.visualize:
         output_path = f"{debug_args.output}/{timestamp}"
         os.mkdir(output_path)
-        out = cv2.VideoWriter(f'{output_path}/run.mp4', fourcc, fps, (int(w), int(h))) 
+        filepath = debug_args.source
+        filename = os.path.basename(filepath) 
+        out = cv2.VideoWriter(os.path.join(output_path, filename + ".mp4"), fourcc, fps, (int(w), int(h))) 
 
-    # _HAR 모듈 실행 대기
+    def wait_subprocess_ready(name, pipe, logger):
+        while True:
+            logger.info(f'wating for {name} process to ready...')
+            if pipe.recv():
+                logger.info(f'{name} process ready')
+                break
+            else:
+                time.sleep(0.1)
+
     if 'selfharm' in args.modules:
         for i in range(scale_args.selfharm):
             wait_subprocess_ready("Selfharm", selfharm_pipe_list[i][0], logger)
@@ -201,7 +200,7 @@ def main():
         if 'violence' in args.modules:
             for p in violence_pipe_list:
                 p[0].send("end_flag")
-        event_process.kill()
+        # event_process.kill()
     atexit.register(shut_down)
     
     # 사람 감지 및 추적
@@ -292,6 +291,7 @@ def main():
                     emotion_pipe_list[num_frame % scale_args.emotion][0].send([tracks, meta_data, face_detections, frame])
             if 'violence' in args.modules and 0 < scale_args.violence:
                 violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])
+
             if debug_args.visualize:
                 out.write(draw_frame)
 
