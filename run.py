@@ -47,56 +47,52 @@ def main():
     # See "https://tutorials.pytorch.kr/intermediate/dist_tuto.html"
     torch.multiprocessing.set_start_method('spawn') 
     
-    # 프로세스간 데이터 전달을 위한 파이프라인 생성 (Sacle mode)
+    process_list = []
     if 'selfharm' in args.modules:
         selfharm_pipe_list = []
         for _ in range(scale_args.selfharm):
             selfharm_input_pipe, selfharm_output_pipe = Pipe()
             selfharm_pipe_list.append((selfharm_input_pipe, selfharm_output_pipe))
+        for i in range(scale_args.selfharm):
+            selfharm_process = Process(target=Selfharm, args=(selfharm_pipe_list[i][1], event_input_pipe,), name=f"Selfharm_Process_{i}")
+            process_list.append(selfharm_process)
+            selfharm_process.start()
+
     if 'falldown' in args.modules:
         falldown_pipe_list = []
         for _ in range(scale_args.falldown):
             falldown_input_pipe, falldown_output_pipe = Pipe()
             falldown_pipe_list.append((falldown_input_pipe, falldown_output_pipe))
+        for i in range(scale_args.falldown):
+            falldown_process = Process(target=Falldown, args=(falldown_pipe_list[i][1], event_input_pipe,), name=f"Falldown_Process_{i}")
+            process_list.append(falldown_process)
+            falldown_process.start()
+
     if 'emotion' in args.modules:
         emotion_pipe_list = []
         for _ in range(scale_args.emotion):
             emotion_input_pipe, emotion_output_pipe = Pipe()
             emotion_pipe_list.append((emotion_input_pipe, emotion_output_pipe))
+        for i in range(scale_args.emotion):
+            emotion_process = Process(target=Emotion, args=(emotion_pipe_list[i][1], event_input_pipe,), name=f"Emotion_Process_{i}")
+            process_list.append(emotion_process)
+            emotion_process.start()
+
     if 'violence' in args.modules:
         violence_pipe_list = []
         for _ in range(scale_args.violence):
             violence_input_pipe, violence_output_pipe = Pipe()
             violence_pipe_list.append((violence_input_pipe, violence_output_pipe))
-
-    event_input_pipe, event_output_pipe = Pipe()
-    event_handler = EventHandler()   
-    event_process = Process(target=event_handler.update(), args=(event_output_pipe,))
-    event_process.start()
-
-    process_list = []
-    if 'selfharm' in args.modules:
-        for i in range(scale_args.selfharm):
-            selfharm_process = Process(target=Selfharm, args=(selfharm_pipe_list[i][1], event_input_pipe,), name=f"Selfharm_Process_{i}")
-            process_list.append(selfharm_process)
-            selfharm_process.start()
-    if 'falldown' in args.modules:
-        for i in range(scale_args.falldown):
-            falldown_process = Process(target=Falldown, args=(falldown_pipe_list[i][1], event_input_pipe,), name=f"Falldown_Process_{i}")
-            process_list.append(falldown_process)
-            falldown_process.start()
-    if 'emotion' in args.modules:
-        for i in range(scale_args.emotion):
-            emotion_process = Process(target=Emotion, args=(emotion_pipe_list[i][1], event_input_pipe,), name=f"Emotion_Process_{i}")
-            process_list.append(emotion_process)
-            emotion_process.start()
-    if 'violence' in args.modules:
         for i in range(scale_args.violence):
             violence_process = Process(target=Violence, args=(violence_pipe_list[i][1], event_input_pipe,), name=f"Violence_Process_{i}")
             process_list.append(violence_process)
             violence_process.start()
 
-    # 디버그 모드
+    event_input_pipe, event_output_pipe = Pipe()
+    event_handler = EventHandler()   
+    event_process = Process(target=event_handler.update, args=(event_output_pipe))
+    event_process.start()
+
     if debug_args.debug == True:
         # DB 연결 및 CCTV 정보 조회
         source = debug_args.source
@@ -239,10 +235,10 @@ def main():
                     tid = track.track_id                    
                     draw_frame = draw_bbox_skeleton.draw(draw_frame, tid, detection, skeletons[-1])
             
+            meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} 
+
             if debug_args.visualize:
-                meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'timestamp': timestamp, 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame}
-            else:
-                meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} 
+                meta_data[frame] = draw_frame
 
             # 모듈로 데이터 전송
             if 'selfharm' in args.modules and 0 < scale_args.selfharm:

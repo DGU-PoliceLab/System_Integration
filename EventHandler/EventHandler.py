@@ -35,6 +35,9 @@ class EventHandler:
     def __init__(self):
         pass
 
+    def update(self, event_pipe):
+        pass
+
 class DBUtil:
     def __init__(self):
         self.connect = self.connect_db()
