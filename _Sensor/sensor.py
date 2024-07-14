@@ -12,6 +12,7 @@ class Sensor():
         self.thermal = Thermal(self.thermal_ip, self.thermal_port)
         self.rader = Rader(self.rader_ip, self.rader_port)
         self.logger = get_logger(name= '[SENSOR]', console= True, file= False)
+        self.data = {}
 
     def connect_rader(self):
         self.rader.connect()
@@ -33,6 +34,8 @@ class Sensor():
         result = []
         for track in tracks:
             tid = track.track_id
+            if tid not in self.data:
+                self.data[tid] = {'tid': tid, 'temperature': None, 'breath': None, 'heart': None}
             x1, y1, x2, y2 = track.tlbr
             t_temp = []
             r_temp = []
@@ -56,8 +59,14 @@ class Sensor():
             if len(r_temp) > 0 and tid == r_temp[0]['id']:
                 collect['breath'] = rd['breath']
                 collect['heart'] = rd['heart']
-            result.append(collect)
-            
+            if collect['temperature'] != None and collect['temperature'] != 0:
+                self.data[tid]['temperature'] = collect['temperature']
+            if collect['breath'] != None and collect['breath'] != 0:
+                self.data[tid]['breath'] = collect['breath']
+            if collect['heart'] != None and collect['heart'] != 0:
+                self.data[tid]['heart'] = collect['heart']
+            print(collect, self.data[tid])
+            result.append(self.data[tid])
         return result, thermal_response, rader_response, overlay_image
     
     # def _process(self, pipe):
