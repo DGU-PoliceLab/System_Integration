@@ -95,7 +95,7 @@ class Thermal():
                 thermal_box = thermal_img[thermal_y1:thermal_y2, thermal_x1:thermal_x2]
                 avg_pixel_value = np.mean(thermal_box)
                 skin_surface_temp = (avg_pixel_value - 5500) / 100
-                self.logger.info(f"Detection {i}: Average Pixel Value = {avg_pixel_value}, Skin Surface Temperature = {skin_surface_temp:.2f}°C")
+                self.logger.debug(f"Detection {i}: Average Pixel Value = {avg_pixel_value}, Skin Surface Temperature = {skin_surface_temp:.2f}°C")
                 temperature.append({'id': i, 'pos': (pos_x, pos_y), 'temp': skin_surface_temp})
 
         # return temperature

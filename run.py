@@ -221,38 +221,8 @@ def main():
             
             detections = np.array(detections, dtype=np.float32)
             skeletons = np.array(skeletons, dtype=np.float32)
-            online_targets = tracker.update(detections, skeletons, frame)
-
+            tracks = tracker.update(detections, skeletons, frame)
             face_detections = face_detector.detect(frame)
-
-            # if num_frame % fps == 0:
-                # face_detections = face_detector.detect(frame)
-                # Sensor(frame, face_detections)
-                # if debug_args.rader:
-                #     temperature = Thermal(thermal_info, frame, face_detections)
-                # if num_frame < len(rader_data):
-                #     cur_rader_data = rader_data[num_frame]
-                #     vital_data = cur_rader_data["vital_info"]
-                #     target_data = []
-                #     for track in online_targets:
-                #         tid = track.track_id
-                #         x1, y1, x2, y2 = track.tlbr
-                #         target_data.append({"id": tid, "range": [x1, x2, y1, y2]})
-
-                #     for vital in vital_data:
-                #         pos, depth = vital["pos"]
-                #         heartbeat_rate = vital["heartbeat_rate"]
-                #         breath_rate = vital["breath_rate"]
-                #         offset = (int(pos) + 200) / 400 * int(w)
-                #         for target in target_data:
-                #             tid = target["id"]
-                #             pos_range = target["range"]
-                #             if offset >= pos_range[0] and offset <= pos_range[1]:
-                #                 logger.info(f"tid:{tid}, heartbeat_rate: {heartbeat_rate}, breath_rate: {breath_rate}")
-                #                 if debug_args.visualize:
-                #                     draw_frame = draw_vital.draw(draw_frame, int(pos_range[0]), int(pos_range[2]), heartbeat_rate, breath_rate)
-                                    
-            tracks = online_targets # 모듈로 전달할 감지 결과
             
             if debug_args.visualize:
                 meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame} # 모듈로 전달할 메타데이터
@@ -273,9 +243,8 @@ def main():
             # if 'longterm' in args.modules:
             #     longterm_input_pipe.send(input_data)
 
-            thermal_data, rader_data, overlay_image = sensor.get_data(frame, face_detections)
-            logger.info(thermal_data)
-            logger.info(rader_data)
+            combine_data, thermal_data, rader_data, overlay_image = sensor.get_data(frame, tracks, face_detections)
+            logger.info(combine_data)
             if debug_args.visualize:
                 red = (0, 0, 255)
                 blue = (255, 0, 0)

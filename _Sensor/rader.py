@@ -82,8 +82,8 @@ class Rader():
                     if -200 <= pos_x <= 200 and pos_y < 15:
                         conv_pos_x = (pos_x + 200) / 400 * w
                         track_info[track_id] = {"track_id":track_id, "pos_x":conv_pos_x, "pos_y":pos_y}
-                self.logger.info(f"TRACK: {track_info}")
-                self.logger.info(f"VITAL: {self.vital_info}")
+                self.logger.debug(f"TRACK: {track_info}")
+                self.logger.debug(f"VITAL: {self.vital_info}")
                 vital_info = {}
                 for idx in range(0, len(vital_data), 23):
                     if idx + 11 < len(vital_data):
@@ -97,7 +97,7 @@ class Rader():
                 matching_keys = self.manage_keys(track_keys, vital_keys)
                 
                 for key in matching_keys:
-                    self.logger.info(f"Matching Data: {track_info[key]}, {self.vital_info[key]}")
+                    self.logger.debug(f"Matching Data: {track_info[key]}, {self.vital_info[key]}")
                     result.append({'id': key, 'pos': (track_info[key]['pos_x'],track_info[key]['pos_y']), 'breath': self.vital_info[key]['vital_breath'], 'heart': self.vital_info[key]['vital_heart']})
             return result
 
