@@ -4,6 +4,7 @@ sys.path.insert(0, "/System_Integration/_PoseEstimation/mmlab")
 sys.path.insert(0, "/System_Integration/_Tracker")
 sys.path.insert(0, "/System_Integration/_HAR")
 sys.path.insert(0, "/System_Integration/_MOT")
+import os
 import copy
 from multiprocessing import Process, Queue, Pipe
 import cv2
@@ -111,16 +112,13 @@ def main():
             violence_process = Process(target=Violence, args=(violence_pipe_list[i][1], event_input_pipe,), name=f"Violence_Process_{i}")
             process_list.append(violence_process)
             violence_process.start()
-    # if 'longterm' in args.modules:
-    #     longterm_process = Process(target=Longterm, args=(longterm_output_pipe, event_input_pipe,))
-    #     longterm_process.start()
 
     # 디버그 모드
     if debug_args.debug == True:
         # DB 연결 및 CCTV 정보 조회
         source = debug_args.source
         cctv_info = dict()
-        cctv_info['cctv_id'] = debug_args.cctv_id
+        cctv_info['id'] = debug_args.cctv_id
         cctv_info['ip'] = debug_args.cctv_ip
         cctv_info['name'] = debug_args.cctv_name
         thermal_info = dict()
@@ -172,8 +170,10 @@ def main():
     sensor.connect_rader()
 
     # 디버그(시각화, 동영상 저장) 
-    if debug_args.visualize:    
-        out = cv2.VideoWriter(f'/System_Integration/_Output/video_clip_{timestamp}.mp4', fourcc, fps, (int(w), int(h))) 
+    if debug_args.visualize:
+        output_path = f"{debug_args.output}/{timestamp}"
+        os.mkdir(output_path)
+        out = cv2.VideoWriter(f'{output_path}/run.mp4', fourcc, fps, (int(w), int(h))) 
 
     # _HAR 모듈 실행 대기
     if 'selfharm' in args.modules:
@@ -188,8 +188,6 @@ def main():
     if 'violence' in args.modules:
         for i in range(scale_args.violence):
             wait_subprocess_ready("Violence", violence_pipe_list[i][0], logger)
-    # if 'longterm' in args.modules:
-    #     wait_subprocess_ready("Longterm", longterm_input_pipe, logger)
 
     # 사람 감지 및 추적
     while cap.isOpened():
@@ -225,23 +223,22 @@ def main():
             face_detections = face_detector.detect(frame)
             
             if debug_args.visualize:
-                meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame} # 모듈로 전달할 메타데이터
+                meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'timestamp': timestamp, 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame} # 모듈로 전달할 메타데이터
             else:
                 meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} # 모듈로 전달할 메타데이터
             input_data = [tracks, meta_data] # 모듈로 전달할 데이터
             e_input_data = [frame, meta_data]
             
             # 모듈로 데이터 전송
-            if 'selfharm' in args.modules:
-                selfharm_pipe_list[num_frame % scale_args.selfharm][0].send(input_data)
-            if 'falldown' in args.modules:
-                falldown_pipe_list[num_frame % scale_args.falldown][0].send(input_data)
-            if 'emotion' in args.modules:
-                emotion_pipe_list[num_frame % scale_args.emotion][0].send(e_input_data)
-            if 'violence' in args.modules:
-                violence_pipe_list[num_frame % scale_args.violence][0].send(input_data)
-            # if 'longterm' in args.modules:
-            #     longterm_input_pipe.send(input_data)
+            if 'selfharm' in args.modules and 0 < scale_args.selfharm:
+                selfharm_pipe_list[num_frame % scale_args.selfharm][0].send([tracks, meta_data])
+            if 'falldown' in args.modules and 0 < scale_args.falldown:
+                falldown_pipe_list[num_frame % scale_args.falldown][0].send([tracks, meta_data])
+            if num_frame % fps == 0:
+                if 'emotion' in args.modules and 0 < scale_args.emotion:
+                    emotion_pipe_list[num_frame % scale_args.emotion][0].send([tracks, meta_data, face_detections, frame])
+            if 'violence' in args.modules and 0 < scale_args.violence:
+                violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])
 
             combine_data, thermal_data, rader_data, overlay_image = sensor.get_data(frame, tracks, face_detections)
             logger.info(combine_data)
