@@ -18,11 +18,11 @@ def get_arg(category = None, arg= None):
 
 def get_root_args():
     parser = ArgumentParser()
-    parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion"],help='running modules')
-    # parser.add_argument('--modules', type=list, default=[],help='running modules')
+    parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "longterm"],help='running modules')
+    # parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "snapshot", "violence", "thermal"],help='running modules')
     parser.add_argument('--test', type=str, default='test',help='test')
     parser.add_argument('--nas_path', type=str, default= "/System_Integration/_Output/NAS", help='NAS path'),
-    parser.add_argument('--img-size', type=int, default=1080, help='inference size (pixels)') # 480 -> 1080 수정완료.
+    parser.add_argument('--img-size', type=int, default=1080, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.7, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.3, help='IOU threshold for NMS')
     parser.add_argument('--device', default='cuda:0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
@@ -105,9 +105,9 @@ def get_thermal_args():
 def get_scale_args():
     parser = ArgumentParser("SCALE")
     parser.add_argument("--selfharm", type=int, default=4)
-    parser.add_argument("--falldown", type=int, default=2)
+    parser.add_argument("--falldown", type=int, default=1)
     parser.add_argument("--emotion", type=int, default=1)
-    parser.add_argument("--violence", type=int, default=1)
+    parser.add_argument("--violence", type=int, default=0)
     args = parser.parse_args()
     return args
 

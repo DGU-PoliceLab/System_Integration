@@ -13,6 +13,8 @@ import numpy as np
 import time
 import json
 from datetime import datetime
+import atexit
+
 from _Tracker.BoTSORT.tracker.bot_sort import BoTSORT
 from _DB.db_controller import connect_db, insert_event, insert_realtime
 from _DB.mq_controller import connect_mq
@@ -29,7 +31,6 @@ from _HAR.PLASS.selfharm import Selfharm
 from _HAR.CSDC.falldown import Falldown
 from _HAR.HRI.emotion import Emotion
 from _HAR.MHNCITY.violence.violence import Violence
-# from _HAR.MHNCITY.longterm.longterm import Longterm
 from variable import get_root_args, get_sort_args, get_scale_args, get_debug_args
 from rtmo import get_model
 
@@ -80,8 +81,6 @@ def main():
         for _ in range(scale_args.violence):
             violence_input_pipe, violence_output_pipe = Pipe()
             violence_pipe_list.append((violence_input_pipe, violence_output_pipe))
-    # if 'longterm' in args.modules:
-    #     longterm_input_pipe, longterm_output_pipe = Pipe()
 
     # 이벤트 처리를 위한 수집을 위한 파이프라인 생성
     event_input_pipe, event_output_pipe = Pipe()
@@ -155,7 +154,7 @@ def main():
 
     # 동영상 관련 설정
     now = datetime.now()
-    timestamp = str(now).replace(" ", "").replace(":",";")
+    timestamp = str(now).replace(" ", "").replace(":", "-").replace(".", "-")
     cap = cv2.VideoCapture(source)
     fourcc = cv2.VideoWriter_fourcc('M','P','4','V')
     fps = 30
@@ -189,6 +188,24 @@ def main():
         for i in range(scale_args.violence):
             wait_subprocess_ready("Violence", violence_pipe_list[i][0], logger)
 
+    # 종료 함수
+    def shut_down():
+        print("ShutDown!")
+        if 'selfharm' in args.modules:
+            for p in selfharm_pipe_list:
+                p[0].send("end_flag")
+        if 'falldown' in args.modules:
+            for p in falldown_pipe_list:
+                p[0].send("end_flag")
+        if 'emotion' in args.modules:
+            for p in emotion_pipe_list:
+                p[0].send("end_flag")
+        if 'violence' in args.modules:
+            for p in violence_pipe_list:
+                p[0].send("end_flag")
+        event_process.kill()
+    atexit.register(shut_down)
+    
     # 사람 감지 및 추적
     while cap.isOpened():
         ret, frame = cap.read()
@@ -204,7 +221,7 @@ def main():
                 pred = _['predictions'][0]
                 l_p = len(pred)
                 logger.info(f'frame #{num_frame} pose_results- {l_p} person detect!')
-                n_person = 1
+
                 pred.sort(key = lambda x: x['bbox'][0][0])
 
                 for p in pred:
@@ -213,9 +230,6 @@ def main():
                     detection = [*p['bbox'][0], p['bbox_score']]
                     detections.append(detection)
                     skeletons.append([a + [b] for a, b in zip(keypoints, keypoints_scores)])
-                    if debug_args.visualize:
-                        draw_frame = draw_bbox_skeleton.draw(draw_frame, n_person, detection, keypoints)
-                    n_person += 1   
             
             detections = np.array(detections, dtype=np.float32)
             skeletons = np.array(skeletons, dtype=np.float32)
@@ -267,23 +281,9 @@ def main():
         out.release()
     cap.release()
     sensor.disconnect_rader()
+    shut_down()
 
     logger.warning("Main process end.")
-
-    if 'selfharm' in args.modules:
-        for p in selfharm_pipe_list:
-            p[0].send("end_flag")
-    if 'falldown' in args.modules:
-        for p in falldown_pipe_list:
-            p[0].send("end_flag")
-    if 'emotion' in args.modules:
-        for p in emotion_pipe_list:
-            p[0].send("end_flag")
-    if 'violence' in args.modules:
-        for p in violence_pipe_list:
-            p[0].send("end_flag")
-
-    event_process.kill()
 
 if __name__ == '__main__':
     main()
