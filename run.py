@@ -97,6 +97,9 @@ def main():
     event_process = Process(target=event_handler.update, args=(event_output_pipe, ))
     event_process.start()
 
+    from multiprocessing import Process, Queue, Pipe #TODO TEMP 
+    object_snapshot_control_queue = Queue() #TODO TEMP 
+
     if debug_args.debug == True:
         source = debug_args.source
         cctv_info = dict()
@@ -110,8 +113,23 @@ def main():
         with open(debug_args.rader_data, 'r') as f:
             rader_data = json.load(f)
     else:
-        pass
+        # try:
+        #     conn = connect_db("mysql-pls")
+        #     if conn.open:
+        #         if dict_args['video_file'] != "":
+        #             cctv_info = get_cctv_info(conn)
+        #     else:
+        #         logger.warning('RUN-CCTV Database connection is not open.')
+        #         cctv_info = {'cctv_id': 404}
+        # except Exception as e:
+        #     logger.warning(f'Unable to connect to database, error: {e}')
+        #     cctv_info = {'cctv_id': 404}
 
+        # cctv_info = cctv_info[1]
+        # source = cctv_info['ip']
+        # Process(target=object_snapshot_control, args=(object_snapshot_control_queue,)).start()
+        pass # 서버 상의 DB 연동 코드를 봐야 알 수 있음
+    
     # 자세 추정 모델
     inferencer, init_args, call_args, display_alias = rtmo.get_model()
     # 얼굴 감지 모델
@@ -210,8 +228,7 @@ def main():
             
             meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'fps': int(fps), 'timestamp': timestamp,
                          'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} 
-            
-            #'timestamp': timestamp 용도 상, 'dir_name' 혹은 'path'를 전달하는게 맞음. timestamp가 내부적으로 왜 필요한지 유추가 어려우니까.
+            #TODO 'timestamp': timestamp 용도 상, 'dir_name' 혹은 'path'를 전달하는게 맞음. timestamp가 내부적으로 왜 필요한지 유추가 어려우니까.
             
             if debug_args.visualize:
                 for i, track in enumerate(tracks):

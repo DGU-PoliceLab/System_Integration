@@ -33,10 +33,52 @@ logger = get_logger(name= '[EVENT]', console= True, file= True)
 
 class EventHandler:
     def __init__(self):
+        self.db_conn = self.connect_db(config=db_config)
         pass
 
+    def connect_db(self, config, db_name=None):
+        if db_name == None:
+            db_name = config["database"]
+
+        conn = pymysql.connect(host=config["host"],
+                                port=config["port"],
+                                user=config["user"],
+                                password=config["password"],
+                                database=db_name,
+                                charset=config["charset"])
+        return conn
+    
+
+
     def update(self, event_pipe):
-        pass
+        def collect_evnet(pipe):
+            debug_args = get_debug_args()
+
+            if debug_args.debug == True:
+                while True:
+                    event = pipe.recv()
+                    if event is not None:
+                        logger.info(f"Event: {event}")
+                    else:
+                        time.sleep(0.0001)
+            else:
+                db_conn = self.db_conn
+                mq_conn = self.mq_conn
+
+                event_queue = Queue()
+                insert_db_thread = Thread(target=insert_event, args=(event_queue, db_conn, mq_conn))
+                insert_db_thread.start()
+                while True:
+                    event = pipe.recv()
+                    if event is not None:
+                        event_queue.put(event)
+                        print(f"event_queue.size: {event_queue.qsize()}")
+                    else:
+                        time.sleep(0.0001)
+            pass
+        collect_evnet(event_pipe)
+
+
 
 class DBUtil:
     def __init__(self):
@@ -44,17 +86,7 @@ class DBUtil:
         self.connect_pls_temp = self.connect_db(db_name="mysql-pls") # 스냅샷 쪽 인물 데이터 실시간 갱신 할 때 쓰이는 듯
         pass
 
-    def connect_db(self, db_name=None):
-        if db_name == None:
-            db_name = CONFIG["database"]
 
-        conn = pymysql.connect(host=CONFIG["host"],
-                                port=CONFIG["port"],
-                                user=CONFIG["user"],
-                                password=CONFIG["password"],
-                                database=db_name,
-                                charset=CONFIG["charset"])
-        return conn
         pass
 
 
@@ -92,31 +124,7 @@ class meg_handler:
 
         pass
 
-    def collect_evnet(pipe):
-        debug_args = get_debug_args()
-
-        if debug_args.debug == True:
-            while True:
-                event = pipe.recv()
-                if event is not None:
-                    logger.info(f"Event: {event}")
-                else:
-                    time.sleep(0.0001)
-        else:
-            db_conn = connect_db()
-            mq_conn = connect_mq()
-
-            event_queue = Queue()
-            insert_db_thread = Thread(target=insert_event, args=(event_queue, db_conn, mq_conn))
-            insert_db_thread.start()
-            while True:
-                event = pipe.recv()
-                if event is not None:
-                    event_queue.put(event)
-                    print(f"event_queue.size: {event_queue.qsize()}")
-                else:
-                    time.sleep(0.0001)
-            pass
+    
 
 # call by run
 def object_snapshot_control(data_pipe):
