@@ -33,7 +33,7 @@ logger = get_logger(name= '[EVENT]', console= True, file= True)
 
 class EventHandler:
     def __init__(self):
-        self.db_conn = self.connect_db(config=db_config)
+        # self.db_conn = self.connect_db(config=db_config)
         pass
 
     def connect_db(self, config, db_name=None):

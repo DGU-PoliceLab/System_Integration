@@ -149,6 +149,7 @@ def main():
 
     sensor = Sensor(debug_args.thermal_ip, debug_args.thermal_port, debug_args.rader_ip, debug_args.rader_port)
     sensor.connect_rader()
+    sensor.connect_thermal()
 
     # 디버그(시각화, 동영상 저장) 
     if debug_args.visualize:
@@ -203,7 +204,7 @@ def main():
     while cap.isOpened():
         ret, frame = cap.read()
         if ret:
-            draw_frame = frame.copy()
+            v_frame = frame.copy()
             current_datetime = datetime.now()
             detections = []
             skeletons = []
@@ -233,14 +234,13 @@ def main():
             meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'fps': int(fps), 'timestamp': timestamp,
                          'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} 
 
-            if debug_args.visualize:
-                for i, track in enumerate(tracks):
-                    skeletons = track.skeletons
-                    detection = track.tlbr
-                    tid = track.track_id
-                    v_frame = draw_bbox_skeleton.draw(v_frame, tid, detection, skeletons[-1])
-                meta_data['v_frame'] = v_frame
-            
+            # if debug_args.visualize:
+            for i, track in enumerate(tracks):
+                skeletons = track.skeletons
+                detection = track.tlbr
+                tid = track.track_id
+                v_frame = draw_bbox_skeleton.draw(v_frame, tid, detection, skeletons[-1])
+            meta_data['v_frame'] = v_frame
             # 모듈로 데이터 전송
             if 'selfharm' in args.modules and 0 < scale_args.selfharm:
                 selfharm_pipe_list[num_frame % scale_args.selfharm][0].send([tracks, meta_data])
@@ -251,25 +251,29 @@ def main():
                     emotion_pipe_list[num_frame % scale_args.emotion][0].send([tracks, meta_data, face_detections, frame])
             if 'violence' in args.modules and 0 < scale_args.violence:
                 violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])
+            
+            if num_frame % fps == 0:
+                combine_data, thermal_data, rader_data, overlay_image = sensor.get_data(frame, tracks, face_detections)
+                logger.info(combine_data)
+                if debug_args.visualize:
+                    red = (0, 0, 255)
+                    blue = (255, 0, 0)
+                    for td in thermal_data:
+                        pos = td['pos']
+                        cv2.line(v_frame, (int(pos[0]), int(pos[1])), (int(pos[0]), int(pos[1])), red, 20)
+                        cv2.putText(v_frame, str(td['temp']), (int(pos[0]), int(pos[1]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, red, 2)
 
-            combine_data, thermal_data, rader_data, overlay_image = sensor.get_data(frame, tracks, face_detections)
-            logger.info(combine_data)
+                    for rd in rader_data:
+                        pos = rd['pos']
+                        cv2.line(v_frame, (int(pos[0]), int(h/2)), (int(pos[0]), int(h/2)), blue, 20)
+                        cv2.putText(v_frame, str(rd['breath']), (int(pos[0]), int(h/2) + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, blue, 2)
+                        cv2.putText(v_frame, str(rd['heart']), (int(pos[0]), int(h/2) + 40), cv2.FONT_HERSHEY_SIMPLEX, 1, blue, 2)
+
+                    cv2.imwrite("/System_Integration/_Output/overlay_image.png", overlay_image)
+
             if debug_args.visualize:
-                red = (0, 0, 255)
-                blue = (255, 0, 0)
-                for td in thermal_data:
-                    pos = td['pos']
-                    cv2.line(draw_frame, (int(pos[0]), int(pos[1])), (int(pos[0]), int(pos[1])), red, 20)
-                    cv2.putText(draw_frame, str(td['temp']), (int(pos[0]), int(pos[1]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, red, 2)
+                out.write(v_frame)
 
-                for rd in rader_data:
-                    pos = rd['pos']
-                    cv2.line(draw_frame, (int(pos[0]), int(h/2)), (int(pos[0]), int(h/2)), blue, 20)
-                    cv2.putText(draw_frame, str(rd['breath']), (int(pos[0]), int(h/2) + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, blue, 2)
-                    cv2.putText(draw_frame, str(rd['heart']), (int(pos[0]), int(h/2) + 40), cv2.FONT_HERSHEY_SIMPLEX, 1, blue, 2)
-
-                cv2.imwrite("/System_Integration/_Output/overlay_image.png", overlay_image)
-                out.write(draw_frame)
             num_frame += 1
         else:
             break
@@ -277,6 +281,7 @@ def main():
         out.release()
     cap.release()
     sensor.disconnect_rader()
+    sensor.disconnect_thermal()
     shut_down()
 
     logger.warning("Main process end.")

@@ -102,11 +102,9 @@ class Thermal():
         return temperature, overlay_image
 
     def recevice(self, frame, detections):
-        self.connect()
         raw_data = self.recv_raw_data()
         header = self.parse_header(raw_data)
         rgb_img = frame
         thermal_img = self.bytes_to_thermal_img(raw_data)
         temperature, pos = self.get_temperature(rgb_img, thermal_img, detections)
-        self.disconnect()
         return temperature, pos

@@ -1,4 +1,3 @@
-
 import sys
 sys.path.insert(0, '/System_Integration/_HAR/MHNCITY/longterm')
 import numpy as np
@@ -22,6 +21,9 @@ def Longterm(data_pipe, event_pipe):
     logger = get_logger(name="[MhnCity.Longterm]", console=True, file=True)
     args = get_longterm_args()
     debug_args = get_debug_args()
+
+    debug_args.visualize = False #TODO. TEMP. 해당 기능에 문제가 있어서 비활성화 시킴. !김현수 작업 요망!
+
     if debug_args.visualize:
         visualizer = Visualizer("longterm")
         init_flag = True
@@ -76,6 +78,6 @@ def Longterm(data_pipe, event_pipe):
                 if init_flag == True:
                     visualizer.mkdir(meta_data['timestamp'])
                     init_flag = False
-                visualizer.save_temp_image([meta_data["frame"], event[0], event[1]], meta_data["num_frame"])
+                visualizer.save_temp_image([meta_data["v_frame"], event[0], event[1]], meta_data["num_frame"])
         else:
             time.sleep(0.0001)

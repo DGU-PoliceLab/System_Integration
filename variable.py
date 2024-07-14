@@ -18,7 +18,7 @@ def get_arg(category = None, arg= None):
 
 def get_root_args():
     parser = ArgumentParser()
-    parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "longterm"],help='running modules')
+    parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "longterm", "violence"],help='running modules')
     # parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "snapshot", "violence", "thermal"],help='running modules')
     parser.add_argument('--test', type=str, default='test',help='test')
     parser.add_argument('--nas_path', type=str, default= "/System_Integration/_Output/NAS", help='NAS path'),
