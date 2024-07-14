@@ -20,13 +20,12 @@ from _DB.db_controller import connect_db, insert_event, insert_realtime
 from _DB.mq_controller import connect_mq
 from _DB.event_controller import collect_evnet
 from _DB.snapshot_controller import object_snapshot_control
+from _Sensor.sensor import Sensor
 from _Utils.logger import get_logger
 from _Utils.head_bbox import *
 from _Utils.pipeline import *
 import _Utils.draw_bbox_skeleton as draw_bbox_skeleton 
 import _Utils.draw_vital as draw_vital
-from _Sensor.radar import radar_start
-from _Sensor.thermal import Thermal
 import _MOT.face_detection as face_detection
 from _HAR.PLASS.selfharm import Selfharm
 from _HAR.CSDC.falldown import Falldown
@@ -133,8 +132,7 @@ def main():
         try:
             conn = connect_db("mysql-pls")
             if conn.open:
-                if dict_args['video_file'] != "":
-                    cctv_info = get_cctv_info(conn)
+                cctv_info = get_cctv_info(conn)
             else:
                 logger.warning('RUN-CCTV Database connection is not open.')
                 cctv_info = {'cctv_id': 404}
@@ -143,10 +141,11 @@ def main():
             cctv_info = {'cctv_id': 404}
 
         cctv_info = cctv_info[1]
-        source = cctv_info['ip']
+        source = cctv_info['cctv_ip']
         Process(target=object_snapshot_control, args=(object_snapshot_control_queue,)).start()
     # CCTV 정보 출력
     logger.info(f"cctv_info : {cctv_info}")
+    
 
     # 사람 감지 및 추적을 위한 모델 로드
     inferencer, init_args, call_args, display_alias = get_model()
@@ -165,6 +164,9 @@ def main():
         w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
     tracker = BoTSORT(bot_sort_args, fps)
+
+    sensor = Sensor(debug_args.thermal_ip, debug_args.thermal_port, debug_args.rader_ip, debug_args.rader_port)
+    sensor.connect_rader()
 
     # 디버그(시각화, 동영상 저장) 
     if debug_args.visualize:
@@ -231,57 +233,16 @@ def main():
             
             detections = np.array(detections, dtype=np.float32)
             skeletons = np.array(skeletons, dtype=np.float32)
-            online_targets = tracker.update(detections, skeletons, frame)
-            if num_frame % fps == 0:
-                face_detections = face_detector.detect(frame)
-            
-            detections = np.array(detections, dtype=np.float32)
-            skeletons = np.array(skeletons, dtype=np.float32)
-            online_targets = tracker.update(detections, skeletons, frame)
-
-            if num_frame % fps == 0:
-                face_detections = face_detector.detect(frame)
-
-            if debug_args.rader:
-                # if num_frame % fps == 0:                   
-                    # temperature = Thermal(thermal_info, frame, face_detections)
-
-                if num_frame < len(rader_data):
-                    cur_rader_data = rader_data[num_frame]
-                    vital_data = cur_rader_data["vital_info"]
-                    target_data = []
-                    for track in online_targets:
-                        tid = track.track_id
-                        x1, y1, x2, y2 = track.tlbr
-                        target_data.append({"id": tid, "range": [x1, x2, y1, y2]})
-
-                    for vital in vital_data: 
-                        pos, depth = vital["pos"]
-                        heartbeat_rate = vital["heartbeat_rate"]
-                        breath_rate = vital["breath_rate"]
-                        offset = (int(pos) + 200) / 400 * int(w) # TODO 하드코딩 제거
-                        for target in target_data:
-                            tid = target["id"]
-                            pos_range = target["range"]
-                            if offset >= pos_range[0] and offset <= pos_range[1]:
-                                # logger.info(f"tid:{tid}, heartbeat_rate: {heartbeat_rate}, breath_rate: {breath_rate}")
-                                if debug_args.visualize:
-                                    draw_frame = draw_vital.draw(draw_frame, int(pos_range[0]), int(pos_range[2]), heartbeat_rate, breath_rate)
-
-            tracks = online_targets
-
-            if debug_args.visualize:
-                for i, track in enumerate(tracks):
-                    skeletons = track.skeletons
-                    detection = track.tlbr
-                    tid = track.track_id                    
-                    draw_frame = draw_bbox_skeleton.draw(draw_frame, tid, detection, skeletons[-1])
+            tracks = tracker.update(detections, skeletons, frame)
+            face_detections = face_detector.detect(frame)
             
             if debug_args.visualize:
-                meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'timestamp': timestamp, 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame}
+                meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'timestamp': timestamp, 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame} # 모듈로 전달할 메타데이터
             else:
-                meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} 
-
+                meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} # 모듈로 전달할 메타데이터
+            input_data = [tracks, meta_data] # 모듈로 전달할 데이터
+            e_input_data = [frame, meta_data]
+            
             # 모듈로 데이터 전송
             if 'selfharm' in args.modules and 0 < scale_args.selfharm:
                 selfharm_pipe_list[num_frame % scale_args.selfharm][0].send([tracks, meta_data])
@@ -292,15 +253,34 @@ def main():
                     emotion_pipe_list[num_frame % scale_args.emotion][0].send([tracks, meta_data, face_detections, frame])
             if 'violence' in args.modules and 0 < scale_args.violence:
                 violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])
+
+            combine_data, thermal_data, rader_data, overlay_image = sensor.get_data(frame, tracks, face_detections)
+            logger.info(combine_data)
+            if debug_args.visualize:
+                red = (0, 0, 255)
+                blue = (255, 0, 0)
+                for td in thermal_data:
+                    pos = td['pos']
+                    cv2.line(draw_frame, (int(pos[0]), int(pos[1])), (int(pos[0]), int(pos[1])), red, 20)
+                    cv2.putText(draw_frame, str(td['temp']), (int(pos[0]), int(pos[1]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, red, 2)
+
+                for rd in rader_data:
+                    pos = rd['pos']
+                    cv2.line(draw_frame, (int(pos[0]), int(h/2)), (int(pos[0]), int(h/2)), blue, 20)
+                    cv2.putText(draw_frame, str(rd['breath']), (int(pos[0]), int(h/2) + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, blue, 2)
+                    cv2.putText(draw_frame, str(rd['heart']), (int(pos[0]), int(h/2) + 40), cv2.FONT_HERSHEY_SIMPLEX, 1, blue, 2)
+
+                cv2.imwrite("/System_Integration/_Output/overlay_image.png", overlay_image)
+
             if debug_args.visualize:
                 out.write(draw_frame)
-
             num_frame += 1
         else:
             break
     if debug_args.visualize:
         out.release()
     cap.release()
+    sensor.disconnect_rader()
     shut_down()
 
     logger.warning("Main process end.")
