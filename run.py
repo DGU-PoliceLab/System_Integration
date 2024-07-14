@@ -18,7 +18,7 @@ import atexit
 from _Tracker.BoTSORT.tracker.bot_sort import BoTSORT
 from EventHandler.EventHandler import EventHandler
 from _Sensor.sensor import Sensor
-# from Sensor.EdgeCam import EdgeCam, Radar, Thermal, Camera
+# from Sensor.edge_cam import EdgeCam, Radar, Thermal, Camera
 from _Utils.logger import get_logger
 from _Utils.head_bbox import *
 from _Utils.pipeline import *
@@ -29,7 +29,7 @@ from _HAR.PLASS.selfharm import Selfharm
 from _HAR.CSDC.falldown import Falldown
 from _HAR.HRI.emotion import Emotion
 from _HAR.MHNCITY.violence.violence import Violence
-from variable import get_root_args, get_sort_args, get_scale_args, get_debug_args
+from variable import get_root_args, get_sort_args, get_scale_args, get_debug_args, get_rader_args, get_thermal_args
 from rtmo import get_model
 
 def main():
@@ -37,10 +37,11 @@ def main():
     logger = get_logger(name= '[RUN]', console= True, file= True)
     # 루트 인자 및 기타 인자 설정
     args = get_root_args()
-    dict_args = vars(args)
     bot_sort_args = get_sort_args()
     bot_sort_args.ablation = False
     bot_sort_args.mot20 = not bot_sort_args.fuse_score
+    rader_args = get_rader_args()
+    thermal_args = get_thermal_args()
     debug_args = get_debug_args()
     scale_args = get_scale_args()
 
@@ -147,9 +148,14 @@ def main():
         h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
     tracker = BoTSORT(bot_sort_args, fps)
 
+    # 센서 관련 설정
     sensor = Sensor(debug_args.thermal_ip, debug_args.thermal_port, debug_args.rader_ip, debug_args.rader_port)
-    sensor.connect_rader()
-    sensor.connect_thermal()
+    # 열화상 센서 연결
+    if thermal_args.use_thermal:
+        sensor.connect_thermal()
+    # 레이더 센서 연결
+    if rader_args.use_rader:
+        sensor.connect_rader()
 
     # 디버그(시각화, 동영상 저장) 
     if debug_args.visualize:
@@ -241,6 +247,7 @@ def main():
                 tid = track.track_id
                 v_frame = draw_bbox_skeleton.draw(v_frame, tid, detection, skeletons[-1])
             meta_data['v_frame'] = v_frame
+            
             # 모듈로 데이터 전송
             if 'selfharm' in args.modules and 0 < scale_args.selfharm:
                 selfharm_pipe_list[num_frame % scale_args.selfharm][0].send([tracks, meta_data])
@@ -258,18 +265,18 @@ def main():
                 if debug_args.visualize:
                     red = (0, 0, 255)
                     blue = (255, 0, 0)
-                    for td in thermal_data:
-                        pos = td['pos']
-                        cv2.line(v_frame, (int(pos[0]), int(pos[1])), (int(pos[0]), int(pos[1])), red, 20)
-                        cv2.putText(v_frame, str(td['temp']), (int(pos[0]), int(pos[1]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, red, 2)
-
-                    for rd in rader_data:
-                        pos = rd['pos']
-                        cv2.line(v_frame, (int(pos[0]), int(h/2)), (int(pos[0]), int(h/2)), blue, 20)
-                        cv2.putText(v_frame, str(rd['breath']), (int(pos[0]), int(h/2) + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, blue, 2)
-                        cv2.putText(v_frame, str(rd['heart']), (int(pos[0]), int(h/2) + 40), cv2.FONT_HERSHEY_SIMPLEX, 1, blue, 2)
-
-                    cv2.imwrite("/System_Integration/_Output/overlay_image.png", overlay_image)
+                    if thermal_args.use_thermal:
+                        for td in thermal_data:
+                            pos = td['pos']
+                            cv2.line(v_frame, (int(pos[0]), int(pos[1])), (int(pos[0]), int(pos[1])), red, 20)
+                            cv2.putText(v_frame, str(td['temp']), (int(pos[0]), int(pos[1]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, red, 2)
+                        cv2.imwrite("/System_Integration/_Output/overlay_image.png", overlay_image)
+                    if rader_args.use_rader:
+                        for rd in rader_data:
+                            pos = rd['pos']
+                            cv2.line(v_frame, (int(pos[0]), int(h/2)), (int(pos[0]), int(h/2)), blue, 20)
+                            cv2.putText(v_frame, str(rd['breath']), (int(pos[0]), int(h/2) + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, blue, 2)
+                            cv2.putText(v_frame, str(rd['heart']), (int(pos[0]), int(h/2) + 40), cv2.FONT_HERSHEY_SIMPLEX, 1, blue, 2)
 
             if debug_args.visualize:
                 out.write(v_frame)
@@ -280,8 +287,10 @@ def main():
     if debug_args.visualize:
         out.release()
     cap.release()
-    sensor.disconnect_rader()
-    sensor.disconnect_thermal()
+    if thermal_args.use_thermal:
+        sensor.disconnect_thermal()
+    if rader_args.use_rader:
+        sensor.disconnect_rader()
     shut_down()
 
     logger.warning("Main process end.")
