@@ -86,8 +86,8 @@ def get_debug_args():
 def get_scale_args():
     parser = ArgumentParser("SCALE")
     parser.add_argument("--selfharm", type=int, default=0) # TODO selfharm, violence 모듈 동작 체크 요망. !김현수 !
-    parser.add_argument("--falldown", type=int, default=4)
-    parser.add_argument("--emotion", type=int, default=2) 
+    parser.add_argument("--falldown", type=int, default=1)
+    parser.add_argument("--emotion", type=int, default=1) 
     parser.add_argument("--violence", type=int, default=0)
     args = parser.parse_args()
     return args

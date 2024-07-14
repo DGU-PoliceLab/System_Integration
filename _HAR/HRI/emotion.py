@@ -105,16 +105,16 @@ def Emotion(data_pipe, event_pipe):
                             hy1 = int(hbox[1])
                             hx2 = int(hbox[2])
                             hy2 = int(hbox[3])
-                            cv2.rectangle(meta_data['frame'], (hx1, hy1), (hx2, hy2), (255, 0, 0), 2)
+                            cv2.rectangle(meta_data['v_frame'], (hx1, hy1), (hx2, hy2), (255, 0, 0), 2)
                             font =  cv2.FONT_HERSHEY_PLAIN
                             ret_string = f'frame: {num_frame}    id: {tid}  action: {emotion}'
 
-                            cv2.putText(meta_data['frame'], ret_string, (350, 40*event_count), font, 2, (255, 0, 0), 2, cv2.LINE_AA)
+                            cv2.putText(meta_data['v_frame'], ret_string, (350, 40*event_count), font, 2, (255, 0, 0), 2, cv2.LINE_AA)
                   
             if debug_args.visualize:
                 if init_flag == True:
                     visualizer.mkdir(meta_data['timestamp'])
                     init_flag = False
-                visualizer.save_temp_image([meta_data["frame"], None, None], meta_data["num_frame"])
+                visualizer.save_temp_image([meta_data["v_frame"], None, None], num_frame)
         else:
             time.sleep(0.0001)

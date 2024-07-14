@@ -99,6 +99,6 @@ def Selfharm(data_pipe, event_pipe):
             meta_array.append(meta_data)
             if debug_args.visualize:
                 visualizer.mkdir(meta_data['timestamp'])
-                visualizer.save_temp_image([meta_data["frame"], EVENT[0], EVENT[1]], meta_data["num_frame"])
+                visualizer.save_temp_image([meta_data["v_frame"], EVENT[0], EVENT[1]], meta_data["num_frame"])
         else:
             time.sleep(0.0001)
