@@ -6,7 +6,7 @@ sys.path.insert(0, "/System_Integration/_HAR")
 sys.path.insert(0, "/System_Integration/_MOT")
 import os
 import copy
-from multiprocessing import Process, Queue, Pipe
+from multiprocessing import Process, Pipe
 import cv2
 import torch
 import numpy as np
@@ -16,11 +16,9 @@ from datetime import datetime
 import atexit
 
 from _Tracker.BoTSORT.tracker.bot_sort import BoTSORT
-from _DB.db_controller import connect_db, insert_event, insert_realtime
-from _DB.mq_controller import connect_mq
-from _DB.event_controller import collect_evnet
-from _DB.snapshot_controller import object_snapshot_control
+from EventHandler.EventHandler import EventHandler
 from _Sensor.sensor import Sensor
+# from Sensor.EdgeCam import EdgeCam, Radar, Thermal, Camera
 from _Utils.logger import get_logger
 from _Utils.head_bbox import *
 from _Utils.pipeline import *
@@ -34,15 +32,6 @@ from _HAR.MHNCITY.violence.violence import Violence
 from variable import get_root_args, get_sort_args, get_scale_args, get_debug_args
 from rtmo import get_model
 
-def wait_subprocess_ready(name, pipe, logger):
-    while True:
-        logger.info(f'wating for {name} process to ready...')
-        if pipe.recv():
-            logger.info(f'{name} process ready')
-            break
-        else:
-            time.sleep(0.1)
-
 def main():
     # 출력 로그 설정
     logger = get_logger(name= '[RUN]', console= True, file= True)
@@ -55,66 +44,62 @@ def main():
     debug_args = get_debug_args()
     scale_args = get_scale_args()
 
-    # 멀티프로세스 환경 torch, cuda 설정
-    torch.multiprocessing.set_start_method('spawn')
-    
-    object_snapshot_control_queue = Queue()
-    
-    # 프로세스간 데이터 전달을 위한 파이프라인 생성 (Sacle mode)
+    def check_args():
+        if debug_args.debug == False:
+            logger.info("Unsupported arguments")
+            logger.info("debug_args.debug == False")
+            exit()
+    check_args()
+
+    torch.multiprocessing.set_start_method('spawn') # See "https://tutorials.pytorch.kr/intermediate/dist_tuto.html"
+    event_input_pipe, event_output_pipe = Pipe()
+    process_list = []
     if 'selfharm' in args.modules:
         selfharm_pipe_list = []
         for _ in range(scale_args.selfharm):
             selfharm_input_pipe, selfharm_output_pipe = Pipe()
             selfharm_pipe_list.append((selfharm_input_pipe, selfharm_output_pipe))
+        for i in range(scale_args.selfharm):
+            selfharm_process = Process(target=Selfharm, args=(selfharm_pipe_list[i][1], event_input_pipe,), name=f"Selfharm_Process_{i}")
+            process_list.append(selfharm_process)
+            selfharm_process.start()
+
     if 'falldown' in args.modules:
         falldown_pipe_list = []
         for _ in range(scale_args.falldown):
             falldown_input_pipe, falldown_output_pipe = Pipe()
             falldown_pipe_list.append((falldown_input_pipe, falldown_output_pipe))
+        for i in range(scale_args.falldown):
+            falldown_process = Process(target=Falldown, args=(falldown_pipe_list[i][1], event_input_pipe,), name=f"Falldown_Process_{i}")
+            process_list.append(falldown_process)
+            falldown_process.start()
+
     if 'emotion' in args.modules:
         emotion_pipe_list = []
         for _ in range(scale_args.emotion):
             emotion_input_pipe, emotion_output_pipe = Pipe()
             emotion_pipe_list.append((emotion_input_pipe, emotion_output_pipe))
+        for i in range(scale_args.emotion):
+            emotion_process = Process(target=Emotion, args=(emotion_pipe_list[i][1], event_input_pipe,), name=f"Emotion_Process_{i}")
+            process_list.append(emotion_process)
+            emotion_process.start()
+
     if 'violence' in args.modules:
         violence_pipe_list = []
         for _ in range(scale_args.violence):
             violence_input_pipe, violence_output_pipe = Pipe()
             violence_pipe_list.append((violence_input_pipe, violence_output_pipe))
-
-    # 이벤트 처리를 위한 수집을 위한 파이프라인 생성
-    event_input_pipe, event_output_pipe = Pipe()
-
-    # 이벤트 프로세스
-    event_process = Process(target=collect_evnet, args=(event_output_pipe,))
-    event_process.start()
-
-    # 모듈별 프로세스
-    process_list = []
-    if 'selfharm' in args.modules:
-        for i in range(scale_args.selfharm):
-            selfharm_process = Process(target=Selfharm, args=(selfharm_pipe_list[i][1], event_input_pipe,), name=f"Selfharm_Process_{i}")
-            process_list.append(selfharm_process)
-            selfharm_process.start()
-    if 'falldown' in args.modules:
-        for i in range(scale_args.falldown):
-            falldown_process = Process(target=Falldown, args=(falldown_pipe_list[i][1], event_input_pipe,), name=f"Falldown_Process_{i}")
-            process_list.append(falldown_process)
-            falldown_process.start()
-    if 'emotion' in args.modules:
-        for i in range(scale_args.emotion):
-            emotion_process = Process(target=Emotion, args=(emotion_pipe_list[i][1], event_input_pipe,), name=f"Emotion_Process_{i}")
-            process_list.append(emotion_process)
-            emotion_process.start()
-    if 'violence' in args.modules:
         for i in range(scale_args.violence):
             violence_process = Process(target=Violence, args=(violence_pipe_list[i][1], event_input_pipe,), name=f"Violence_Process_{i}")
             process_list.append(violence_process)
             violence_process.start()
 
+    event_handler = EventHandler()   
+    event_process = Process(target=event_handler.update, args=(event_output_pipe, ))
+    event_process.start()
+
     # 디버그 모드
     if debug_args.debug == True:
-        # DB 연결 및 CCTV 정보 조회
         source = debug_args.source
         cctv_info = dict()
         cctv_info['id'] = debug_args.cctv_id
@@ -126,26 +111,23 @@ def main():
         rader_data = None
         with open(debug_args.rader_data, 'r') as f:
             rader_data = json.load(f)
-        
     else:
-        # DB 연결 및 CCTV 정보 조회
-        try:
-            conn = connect_db("mysql-pls")
-            if conn.open:
-                cctv_info = get_cctv_info(conn)
-            else:
-                logger.warning('RUN-CCTV Database connection is not open.')
-                cctv_info = {'cctv_id': 404}
-        except Exception as e:
-            logger.warning(f'Unable to connect to database, error: {e}')
-            cctv_info = {'cctv_id': 404}
+        # try:
+        #     conn = connect_db("mysql-pls")
+        #     if conn.open:
+        #         if dict_args['video_file'] != "":
+        #             cctv_info = get_cctv_info(conn)
+        #     else:
+        #         logger.warning('RUN-CCTV Database connection is not open.')
+        #         cctv_info = {'cctv_id': 404}
+        # except Exception as e:
+        #     logger.warning(f'Unable to connect to database, error: {e}')
+        #     cctv_info = {'cctv_id': 404}
 
-        cctv_info = cctv_info[1]
-        source = cctv_info['cctv_ip']
-        Process(target=object_snapshot_control, args=(object_snapshot_control_queue,)).start()
-    # CCTV 정보 출력
-    logger.info(f"cctv_info : {cctv_info}")
-    
+        # cctv_info = cctv_info[1]
+        # source = cctv_info['ip']
+        # Process(target=object_snapshot_control, args=(object_snapshot_control_queue,)).start()
+        pass # 서버 상의 DB 연동 코드를 봐야 알 수 있음
 
     # 사람 감지 및 추적을 위한 모델 로드
     inferencer, init_args, call_args, display_alias = get_model()
@@ -172,7 +154,18 @@ def main():
     if debug_args.visualize:
         output_path = f"{debug_args.output}/{timestamp}"
         os.mkdir(output_path)
-        out = cv2.VideoWriter(f'{output_path}/run.mp4', fourcc, fps, (int(w), int(h))) 
+        filepath = debug_args.source
+        filename = os.path.basename(filepath) 
+        out = cv2.VideoWriter(os.path.join(output_path, filename + ".mp4"), fourcc, fps, (int(w), int(h)))
+
+    def wait_subprocess_ready(name, pipe, logger):
+        while True:
+            logger.info(f'wating for {name} process to ready...')
+            if pipe.recv():
+                logger.info(f'{name} process ready')
+                break
+            else:
+                time.sleep(0.1)
 
     # _HAR 모듈 실행 대기
     if 'selfharm' in args.modules:
@@ -234,21 +227,19 @@ def main():
             detections = np.array(detections, dtype=np.float32)
             skeletons = np.array(skeletons, dtype=np.float32)
             tracks = tracker.update(detections, skeletons, frame)
-            face_detections = face_detector.detect(frame)
+            if num_frame % fps == 0:
+                face_detections = face_detector.detect(frame)
+
+            meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'fps': int(fps), 'timestamp': timestamp,
+                         'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} 
 
             if debug_args.visualize:
                 for i, track in enumerate(tracks):
                     skeletons = track.skeletons
                     detection = track.tlbr
-                    tid = track.track_id                    
-                    draw_frame = draw_bbox_skeleton.draw(draw_frame, tid, detection, skeletons[-1])
-            
-            if debug_args.visualize:
-                meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'timestamp': timestamp, 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame} # 모듈로 전달할 메타데이터
-            else:
-                meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} # 모듈로 전달할 메타데이터
-            input_data = [tracks, meta_data] # 모듈로 전달할 데이터
-            e_input_data = [frame, meta_data]
+                    tid = track.track_id
+                    v_frame = draw_bbox_skeleton.draw(v_frame, tid, detection, skeletons[-1])
+                meta_data['v_frame'] = v_frame
             
             # 모듈로 데이터 전송
             if 'selfharm' in args.modules and 0 < scale_args.selfharm:
@@ -278,8 +269,6 @@ def main():
                     cv2.putText(draw_frame, str(rd['heart']), (int(pos[0]), int(h/2) + 40), cv2.FONT_HERSHEY_SIMPLEX, 1, blue, 2)
 
                 cv2.imwrite("/System_Integration/_Output/overlay_image.png", overlay_image)
-
-            if debug_args.visualize:
                 out.write(draw_frame)
             num_frame += 1
         else:

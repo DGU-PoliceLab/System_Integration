@@ -42,6 +42,7 @@ def get_root_args():
     parser.add_argument('--save_snapshot', action='store_true', default=True, help='save snapshots for each detected object')
     parser.add_argument('--snapshot_dir', type=str, default=f'/home/mhncity/data/person/27/', help='directory for saving snapshots')
     parser.add_argument('--video_writer', action='store_true', default=True, help='save video')
+    parser.add_argument('--video_file', type=str, default='rtsp', help='local video file')
     parser.add_argument('--max_person_num', type=int, default=4, help='maximum number of people')
     # Tracking Args (BoTSORT)
     parser.add_argument("--track_high_thresh", type=float, default=0.5, help="tracking confidence threshold")
@@ -54,12 +55,6 @@ def get_root_args():
     parser.add_argument("--fuse-score", dest="mot20", default=True, action="store_true", help="fuse score and iou for association")
     # CMC
     parser.add_argument("--cmc-method", default="orb", type=str, help="cmc method: files (Vidstab GMC) | orb | ecc")
-    # ReID (Fast-ReID)
-    parser.add_argument("--with-reid", dest="with_reid", default=True, action="store_true", help="with ReID module.")
-    parser.add_argument("--fast-reid-config", dest="fast_reid_config", default=r"fast_reid/configs/MOT17/sbs_S50.yml", type=str, help="reid config file path")
-    parser.add_argument("--fast-reid-weights", dest="fast_reid_weights", default=r"pretrained/mot17_sbs_S50.pth", type=str, help="reid config file path")
-    parser.add_argument('--proximity_thresh', type=float, default=0.5, help='threshold for rejecting low overlap reid matches')
-    parser.add_argument('--appearance_thresh', type=float, default=0.25, help='threshold for rejecting low appearance similarity reid matches')
     # RTMO
     parser.add_argument('--rtmo-config', type=str, default="_PoseEstimation/mmlab/configs/body_2d_keypoint/rtmo/body7/rtmo-l_16xb16-600e_body7-640x640.py", help='mmpose rtmo checkpoint')
     parser.add_argument('--rtmo_checkpoint', type=str, default="_PoseEstimation/mmlab/mmpose/checkpoints/rtmo-l_16xb16-600e_body7-640x640-b37118ce_20231211.pth", help='mmpose rtmo checkpoint')
