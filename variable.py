@@ -20,7 +20,6 @@ def get_root_args():
     parser = ArgumentParser()
     parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "longterm"],help='running modules')
     # parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "snapshot", "violence", "thermal"],help='running modules')
-
     parser.add_argument('--test', type=str, default='test',help='test')
     parser.add_argument('--nas_path', type=str, default= "/System_Integration/_Output/NAS", help='NAS path'),
     parser.add_argument('--img-size', type=int, default=1080, help='inference size (pixels)')
@@ -43,7 +42,6 @@ def get_root_args():
     parser.add_argument('--save_snapshot', action='store_true', default=True, help='save snapshots for each detected object')
     parser.add_argument('--snapshot_dir', type=str, default=f'/home/mhncity/data/person/27/', help='directory for saving snapshots')
     parser.add_argument('--video_writer', action='store_true', default=True, help='save video')
-    parser.add_argument('--video_file', type=str, default='rtsp', help='local video file')
     parser.add_argument('--max_person_num', type=int, default=4, help='maximum number of people')
     # Tracking Args (BoTSORT)
     parser.add_argument("--track_high_thresh", type=float, default=0.5, help="tracking confidence threshold")
@@ -76,16 +74,31 @@ def get_debug_args():
     parser = ArgumentParser("DEBUG")
     parser.add_argument("--debug", type=bool, default=True)
     parser.add_argument("--visualize", type=bool, default=True)
-    parser.add_argument("--source", type=str, default="_Input/videos/long_term_test_1.mp4")
+    parser.add_argument("--source", type=str, default="rtsp://admin:admin@172.30.1.30/stream1")
     parser.add_argument("--output", type=str, default="_Output")
     parser.add_argument("--cctv_id", type=int, default=-1)
-    parser.add_argument("--cctv_ip", type=int, default=-1)
+    parser.add_argument("--cctv_ip", type=str, default="rtsp://admin:admin@172.30.1.30/stream1")
     parser.add_argument("--cctv_name", type=int, default=-1)
-    parser.add_argument("--thermal_ip", type=str, default="")
+    parser.add_argument("--thermal_ip", type=str, default="172.30.1.40")
     parser.add_argument("--thermal_port", type=int, default=10603)
-    parser.add_argument("--rader", type=bool, default=True)
-    parser.add_argument("--rader_ip", type=str, default="")
+    parser.add_argument("--rader", type=bool, default=False)
+    parser.add_argument("--rader_ip", type=str, default="172.30.1.50")
+    parser.add_argument("--rader_port", type=int, default=5000)
     parser.add_argument("--rader_data", type=str, default="_Input/data/rader_data.json")
+    args = parser.parse_args()
+    return args
+
+def get_rader_args():
+    parser = ArgumentParser("RADER")
+    parser.add_argument("--debug", type=bool, default=True)
+    args = parser.parse_args()
+    return args
+
+def get_thermal_args():
+    parser = ArgumentParser("THERMAL")
+    parser.add_argument("--scale_ratio", type=float, default=2.62)
+    parser.add_argument("--offset_x", type=float, default=0.55)
+    parser.add_argument("--offset_y", type=float, default=1.0)
     args = parser.parse_args()
     return args
 
