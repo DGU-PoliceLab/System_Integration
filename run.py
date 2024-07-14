@@ -235,6 +235,13 @@ def main():
             skeletons = np.array(skeletons, dtype=np.float32)
             tracks = tracker.update(detections, skeletons, frame)
             face_detections = face_detector.detect(frame)
+
+            if debug_args.visualize:
+                for i, track in enumerate(tracks):
+                    skeletons = track.skeletons
+                    detection = track.tlbr
+                    tid = track.track_id                    
+                    draw_frame = draw_bbox_skeleton.draw(draw_frame, tid, detection, skeletons[-1])
             
             if debug_args.visualize:
                 meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'cctv_name': cctv_info['name'], 'timestamp': timestamp, 'num_frame':num_frame, 'frame_size': (int(w), int(h)), 'frame': draw_frame} # 모듈로 전달할 메타데이터
