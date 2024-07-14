@@ -65,7 +65,6 @@ class Sensor():
                 self.data[tid]['breath'] = collect['breath']
             if collect['heart'] != None and collect['heart'] != 0:
                 self.data[tid]['heart'] = collect['heart']
-            print(collect, self.data[tid])
             result.append(self.data[tid])
         return result, thermal_response, rader_response, overlay_image
     
