@@ -78,6 +78,6 @@ def Falldown(data_pipe, event_pipe):
                 if init_flag == True:
                     visualizer.mkdir(meta_data['timestamp'])
                     init_flag = False
-                visualizer.save_temp_image([meta_data["frame"], action_name, confidence], meta_data["num_frame"])
+                visualizer.save_temp_image([meta_data["v_frame"], action_name, confidence], meta_data["num_frame"])
         else:
             time.sleep(0.0001)
