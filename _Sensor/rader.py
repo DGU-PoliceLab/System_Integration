@@ -59,11 +59,13 @@ class Rader():
                 matching_keys.append(key)
         return matching_keys
     
-    def recevice(self):
-        try:       
+    def recevice(self, frame):
+        try:
+            h, w, _  = frame.shape
             raw_data = self.recv_raw_data()
             hex_data = self.byte_to_hex(raw_data)
             device_id = self.hex_to_int(hex_data[:2])
+            result = []
             if device_id != 0:
                 track_num_idx = 2
                 track_num = self.hex_to_int(hex_data[track_num_idx])
@@ -78,9 +80,10 @@ class Rader():
                     pos_x = self.hex_to_int(track_data[idx + 1: idx + 3]) / 10
                     pos_y = self.hex_to_int(track_data[idx + 3: idx + 5]) / 10
                     if -200 <= pos_x <= 200 and pos_y < 15:
-                        track_info[track_id] = {"track_id":track_id, "pos_x":pos_x, "pos_y":pos_y}
-                self.logger.debug(f"TRACK: {track_info}")
-                self.logger.debug(f"VITAL: {self.vital_info}")
+                        conv_pos_x = (pos_x + 200) / 400 * w
+                        track_info[track_id] = {"track_id":track_id, "pos_x":conv_pos_x, "pos_y":pos_y}
+                self.logger.info(f"TRACK: {track_info}")
+                self.logger.info(f"VITAL: {self.vital_info}")
                 vital_info = {}
                 for idx in range(0, len(vital_data), 23):
                     if idx + 11 < len(vital_data):
@@ -92,9 +95,12 @@ class Rader():
                 track_keys = list(track_info.keys())
                 vital_keys = list(self.vital_info.keys())
                 matching_keys = self.manage_keys(track_keys, vital_keys)
+                
                 for key in matching_keys:
                     self.logger.info(f"Matching Data: {track_info[key]}, {self.vital_info[key]}")
-                        
+                    result.append({'id': key, 'pos': (track_info[key]['pos_x'],track_info[key]['pos_y']), 'breath': self.vital_info[key]['vital_breath'], 'heart': self.vital_info[key]['vital_heart']})
+            return result
+
         except Exception as e:
             self.logger.debug(f"Error occured in rader: {e}")
             pass

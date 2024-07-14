@@ -17,12 +17,12 @@ from _DB.db_controller import connect_db, insert_event, insert_realtime
 from _DB.mq_controller import connect_mq
 from _DB.event_controller import collect_evnet
 from _DB.snapshot_controller import object_snapshot_control
+from _Sensor.sensor import Sensor
 from _Utils.logger import get_logger
 from _Utils.head_bbox import *
 from _Utils.pipeline import *
 import _Utils.draw_bbox_skeleton as draw_bbox_skeleton 
 import _Utils.draw_vital as draw_vital
-from _Sensor.sensor import Sensor
 import _MOT.face_detection as face_detection
 from _HAR.PLASS.selfharm import Selfharm
 from _HAR.CSDC.falldown import Falldown
@@ -168,6 +168,9 @@ def main():
         h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
     tracker = BoTSORT(bot_sort_args, fps)
 
+    sensor = Sensor(debug_args.thermal_ip, debug_args.thermal_port, debug_args.rader_ip, debug_args.rader_port)
+    sensor.connect_rader()
+
     # 디버그(시각화, 동영상 저장) 
     if debug_args.visualize:    
         out = cv2.VideoWriter(f'/System_Integration/_Output/video_clip_{timestamp}.mp4', fourcc, fps, (int(w), int(h))) 
@@ -220,9 +223,11 @@ def main():
             skeletons = np.array(skeletons, dtype=np.float32)
             online_targets = tracker.update(detections, skeletons, frame)
 
-            if num_frame % fps == 0:
-                face_detections = face_detector.detect(frame)
-                Sensor(frame, face_detections)
+            face_detections = face_detector.detect(frame)
+
+            # if num_frame % fps == 0:
+                # face_detections = face_detector.detect(frame)
+                # Sensor(frame, face_detections)
                 # if debug_args.rader:
                 #     temperature = Thermal(thermal_info, frame, face_detections)
                 # if num_frame < len(rader_data):
@@ -268,15 +273,34 @@ def main():
             # if 'longterm' in args.modules:
             #     longterm_input_pipe.send(input_data)
 
+            thermal_data, rader_data, overlay_image = sensor.get_data(frame, face_detections)
+            logger.info(thermal_data)
+            logger.info(rader_data)
+            if debug_args.visualize:
+                red = (0, 0, 255)
+                blue = (255, 0, 0)
+                for td in thermal_data:
+                    pos = td['pos']
+                    cv2.line(draw_frame, (int(pos[0]), int(pos[1])), (int(pos[0]), int(pos[1])), red, 20)
+                    cv2.putText(draw_frame, str(td['temp']), (int(pos[0]), int(pos[1]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, red, 2)
+
+                for rd in rader_data:
+                    pos = rd['pos']
+                    cv2.line(draw_frame, (int(pos[0]), int(h/2)), (int(pos[0]), int(h/2)), blue, 20)
+                    cv2.putText(draw_frame, str(rd['breath']), (int(pos[0]), int(h/2) + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, blue, 2)
+                    cv2.putText(draw_frame, str(rd['heart']), (int(pos[0]), int(h/2) + 40), cv2.FONT_HERSHEY_SIMPLEX, 1, blue, 2)
+
+                cv2.imwrite("/System_Integration/_Output/overlay_image.png", overlay_image)
+
             if debug_args.visualize:
                 out.write(draw_frame)
-
             num_frame += 1
         else:
             break
     if debug_args.visualize:
         out.release()
     cap.release()
+    sensor.disconnect_rader()
 
     logger.warning("Main process end.")
 
