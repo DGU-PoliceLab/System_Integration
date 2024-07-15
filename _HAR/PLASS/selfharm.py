@@ -52,7 +52,8 @@ def inference(model, label_map, pose_data, meta_data, pipe, logger):
         logger.debug(f"action: {action_label}")
         if action_label == 'selfharm':
             logger.info(f"selfharm detected! {meta_data[0]['current_datetime']}")
-            pipe.send({'action': action_label, 'id': 1, 'cctv_id': meta_data[0]['cctv_id'], 'current_datetime': meta_data[0]['current_datetime']})
+            pipe.send({'action': action_label, 'id': 1, 'cctv_id': meta_data[0]['cctv_id'], 'current_datetime': meta_data[0]['current_datetime']
+                       , 'location':meta_data['cctv_name'], 'combine_data': None})
         EVENT = [action_label, confidence]
     except Exception as e:
         logger.error(f'Error occured in inference_thread, error: {e}')

@@ -68,7 +68,8 @@ def Falldown(data_pipe, event_pipe):
             
             if check_event(action_name=action_name, confidence=confidence, threshold=args.threshhold):
                 logger.info("action: falldown")
-                event_pipe.send({'action': "falldown", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name']})
+                event_pipe.send({'action': "falldown", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name'],
+                                 'combine_data': None})
 
 
                 if args.longterm_status:

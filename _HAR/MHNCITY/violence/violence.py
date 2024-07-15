@@ -117,8 +117,9 @@ def Violence(data_pipe, event_pipe):
                 if check_violence(confidence=mean_avg_score, threshhold=args.threshhold):
                     tid = 1
                     logger.info("action: violence")
-                    event_pipe.send({'action': "violence", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime']})
-
+                    event_pipe.send({'action': "violence", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name'],
+                                 'combine_data': None})
+                                
                 all_batch_keypoints = []        
         else:
             time.sleep(0.0001)

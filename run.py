@@ -32,11 +32,17 @@ from _HAR.MHNCITY.violence.violence import Violence
 from variable import get_root_args, get_sort_args, get_scale_args, get_debug_args, get_rader_args, get_thermal_args
 from rtmo import get_model
 
+from _DB.db_controller import connect_db, insert_event, insert_realtime
+from _DB.mq_controller import connect_mq
+from _DB.event_controller import collect_evnet
+from _DB.snapshot_controller import object_snapshot_control
+
 def main():
     # 출력 로그 설정
-    logger = get_logger(name= '[RUN]', console= True, file= True)
+    logger = get_logger(name= '[RUN]', console= False, file= False)
     # 루트 인자 및 기타 인자 설정
     args = get_root_args()
+    dict_args = vars(args)
     bot_sort_args = get_sort_args()
     bot_sort_args.ablation = False
     bot_sort_args.mot20 = not bot_sort_args.fuse_score
@@ -46,14 +52,33 @@ def main():
     scale_args = get_scale_args()
 
     def check_args():
-        if debug_args.debug == False:
-            logger.info("Unsupported arguments")
-            logger.info("debug_args.debug == False")
-            exit()
+        # if debug_args.debug == False:
+        #     logger.info("Unsupported arguments")
+        #     logger.info("debug_args.debug == False")
+        #     exit()
+        pass
     check_args()
 
     torch.multiprocessing.set_start_method('spawn') # See "https://tutorials.pytorch.kr/intermediate/dist_tuto.html"
+    
+    # 이벤트 처리를 위한 수집을 위한 파이프라인 생성
     event_input_pipe, event_output_pipe = Pipe()
+    # 이벤트 프로세스
+    event_process = Process(target=collect_evnet, args=(event_output_pipe,))
+    event_process.start()
+
+
+    # 센서 데이터 + 감정 = 실시간 객체 정보 수집을 위한 파이프라인 생성
+    # realtime_sensor_input_pipe, realtime_sensor_output_pipe = Pipe()
+    # 센서 데이터 + 감정 = 실시간 객체 정보 수집을 위한 프로세스
+    # realtime_sensor_process = Process(target=collect_realtime, args=(realtime_sensor_output_pipe,))
+    # realtime_sensor_process.start()
+
+    # matched_data = (emotion_data['cctv_id'], emotion_data['id'], radar_data[1], radar_data[2], thermal['temp'], emotion_data['mapped_emotion_results'][0], radar_data[3])
+    # realtime_queue.put(matched_data)
+    # insert_realtime_thread = Thread(target=insert_realtime, args=(realtime_status_queue, realtime_status_conn),daemon=False).start()
+    
+      
     process_list = []
     if 'selfharm' in args.modules:
         selfharm_pipe_list = []
@@ -95,40 +120,36 @@ def main():
             process_list.append(violence_process)
             violence_process.start()
 
-    event_handler = EventHandler()   
-    event_process = Process(target=event_handler.update, args=(event_output_pipe, ))
-    event_process.start()
-
     # 디버그 모드
     if debug_args.debug == True:
-        source = debug_args.source
-        cctv_info = dict()
-        cctv_info['id'] = debug_args.cctv_id
-        cctv_info['ip'] = debug_args.cctv_ip
-        cctv_info['name'] = debug_args.cctv_name
-        thermal_info = dict()
-        thermal_info['ip'] = debug_args.thermal_ip
-        thermal_info['port'] = debug_args.thermal_port
-        rader_data = None
-        with open(debug_args.rader_data, 'r') as f:
-            rader_data = json.load(f)
+        # source = debug_args.source
+        # cctv_info = dict()
+        # cctv_info['id'] = debug_args.cctv_id
+        # cctv_info['ip'] = debug_args.cctv_ip
+        # cctv_info['name'] = debug_args.cctv_name
+        # thermal_info = dict()
+        # thermal_info['ip'] = debug_args.thermal_ip
+        # thermal_info['port'] = debug_args.thermal_port
+        # rader_data = None
+        # with open(debug_args.rader_data, 'r') as f:
+        #     rader_data = json.load(f)
+        pass
     else:
-        # try:
-        #     conn = connect_db("mysql-pls")
-        #     if conn.open:
-        #         if dict_args['video_file'] != "":
-        #             cctv_info = get_cctv_info(conn)
-        #     else:
-        #         logger.warning('RUN-CCTV Database connection is not open.')
-        #         cctv_info = {'cctv_id': 404}
-        # except Exception as e:
-        #     logger.warning(f'Unable to connect to database, error: {e}')
-        #     cctv_info = {'cctv_id': 404}
+        try:
+            conn = connect_db("mysql-pls")
+            if conn.open:
+                if dict_args['video_file'] != "":
+                    cctv_info = get_cctv_info(conn)
+            else:
+                logger.warning('RUN-CCTV Database connection is not open.')
+                cctv_info = {'cctv_id': 404}
+        except Exception as e:
+            logger.warning(f'Unable to connect to database, error: {e}')
+            cctv_info = {'cctv_id': 404}
 
-        # cctv_info = cctv_info[1]
-        # source = cctv_info['ip']
-        # Process(target=object_snapshot_control, args=(object_snapshot_control_queue,)).start()
-        pass # 서버 상의 DB 연동 코드를 봐야 알 수 있음
+        cctv_info = cctv_info[1]
+        source = cctv_info['cctv_ip']
+        # source = "./_Input/videos/cctv1_fight_6.mp4"
 
     # 사람 감지 및 추적을 위한 모델 로드
     inferencer, init_args, call_args, display_alias = get_model()
@@ -151,7 +172,7 @@ def main():
     # 센서 관련 설정
     sensor = Sensor(debug_args.thermal_ip, debug_args.thermal_port, debug_args.rader_ip, debug_args.rader_port)
     # 열화상 센서 연결
-    if thermal_args.use_thermal:
+    if thermal_args.use_thermal and not thermal_args.use_reconnect:
         sensor.connect_thermal()
     # 레이더 센서 연결
     if rader_args.use_rader:
@@ -237,8 +258,8 @@ def main():
             if num_frame % fps == 0:
                 face_detections = face_detector.detect(frame)
 
-            meta_data = {'cctv_id': cctv_info['id'], 'current_datetime': current_datetime, 'fps': int(fps), 'timestamp': timestamp,
-                         'cctv_name': cctv_info['name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} 
+            meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'fps': int(fps), 'timestamp': timestamp,
+                         'cctv_name': cctv_info['cctv_name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} 
 
             # if debug_args.visualize:
             for i, track in enumerate(tracks):
@@ -247,47 +268,29 @@ def main():
                 tid = track.track_id
                 v_frame = draw_bbox_skeleton.draw(v_frame, tid, detection, skeletons[-1])
             meta_data['v_frame'] = v_frame
-            
-            # 모듈로 데이터 전송
-            if 'selfharm' in args.modules and 0 < scale_args.selfharm:
-                selfharm_pipe_list[num_frame % scale_args.selfharm][0].send([tracks, meta_data])
-            if 'falldown' in args.modules and 0 < scale_args.falldown:
-                falldown_pipe_list[num_frame % scale_args.falldown][0].send([tracks, meta_data])
-            if num_frame % fps == 0:
-                if 'emotion' in args.modules and 0 < scale_args.emotion:
-                    emotion_pipe_list[num_frame % scale_args.emotion][0].send([tracks, meta_data, face_detections, frame])
-            if 'violence' in args.modules and 0 < scale_args.violence:
-                violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])
-            
+ 
             if num_frame % fps == 0:
                 combine_data, thermal_data, rader_data, overlay_image = sensor.get_data(frame, tracks, face_detections)
                 logger.info(combine_data)
-                if debug_args.visualize:
-                    red = (0, 0, 255)
-                    blue = (255, 0, 0)
-                    if thermal_args.use_thermal:
-                        for td in thermal_data:
-                            pos = td['pos']
-                            cv2.line(v_frame, (int(pos[0]), int(pos[1])), (int(pos[0]), int(pos[1])), red, 20)
-                            cv2.putText(v_frame, str(td['temp']), (int(pos[0]), int(pos[1]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, red, 2)
-                        cv2.imwrite("/System_Integration/_Output/overlay_image.png", overlay_image)
-                    if rader_args.use_rader:
-                        for rd in rader_data:
-                            pos = rd['pos']
-                            cv2.line(v_frame, (int(pos[0]), int(h/2)), (int(pos[0]), int(h/2)), blue, 20)
-                            cv2.putText(v_frame, str(rd['breath']), (int(pos[0]), int(h/2) + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, blue, 2)
-                            cv2.putText(v_frame, str(rd['heart']), (int(pos[0]), int(h/2) + 40), cv2.FONT_HERSHEY_SIMPLEX, 1, blue, 2)
-
-            if debug_args.visualize:
-                out.write(v_frame)
-
+                           
+            # 모듈로 데이터 전송
+            # if 'selfharm' in args.modules and 0 < scale_args.selfharm:
+            #     selfharm_pipe_list[num_frame % scale_args.selfharm][0].send([tracks, meta_data])
+            # if 'falldown' in args.modules and 0 < scale_args.falldown:
+            #     falldown_pipe_list[num_frame % scale_args.falldown][0].send([tracks, meta_data])
+            if num_frame % fps == 0:
+                if 'emotion' in args.modules and 0 < scale_args.emotion:
+                    emotion_pipe_list[num_frame % scale_args.emotion][0].send([tracks, meta_data, face_detections, frame, combine_data])
+            # if 'violence' in args.modules and 0 < scale_args.violence:
+            #     violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])
+                            
             num_frame += 1
         else:
             break
     if debug_args.visualize:
         out.release()
     cap.release()
-    if thermal_args.use_thermal:
+    if thermal_args.use_thermal and not thermal_args.use_reconnect:
         sensor.disconnect_thermal()
     if rader_args.use_rader:
         sensor.disconnect_rader()

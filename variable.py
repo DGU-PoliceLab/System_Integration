@@ -67,16 +67,16 @@ def get_root_args():
 
 def get_debug_args():
     parser = ArgumentParser("DEBUG")
-    parser.add_argument("--debug", type=bool, default=True)
-    parser.add_argument("--visualize", type=bool, default=True)
-    parser.add_argument("--source", type=str, default="rtsp://admin:admin@172.30.1.30/stream1")
+    parser.add_argument("--debug", type=bool, default=False)
+    parser.add_argument("--visualize", type=bool, default=False)
+    parser.add_argument("--source", type=str, default="rtsp://admin:wonwoo0!23@172.30.1.42/stream1")
     parser.add_argument("--output", type=str, default="_Output")
     parser.add_argument("--cctv_id", type=int, default=-1)
-    parser.add_argument("--cctv_ip", type=str, default="rtsp://admin:admin@172.30.1.30/stream1")
+    parser.add_argument("--cctv_ip", type=str, default="rtsp://admin:wonwoo0!23@172.30.1.42/stream1")
     parser.add_argument("--cctv_name", type=int, default=-1)
-    parser.add_argument("--thermal_ip", type=str, default="172.30.1.40")
+    parser.add_argument("--thermal_ip", type=str, default="172.30.1.21")
     parser.add_argument("--thermal_port", type=int, default=10603)
-    parser.add_argument("--rader_ip", type=str, default="172.30.1.50")
+    parser.add_argument("--rader_ip", type=str, default="172.30.1.51")
     parser.add_argument("--rader_port", type=int, default=5000)
     parser.add_argument("--rader_data", type=str, default="_Input/data/rader_data.json")
     args = parser.parse_args()
@@ -91,6 +91,7 @@ def get_rader_args():
 def get_thermal_args():
     parser = ArgumentParser("THERMAL")
     parser.add_argument("--use_thermal", type=bool, default=True)
+    parser.add_argument("--use_reconnect", type=bool, default=True)
     parser.add_argument("--scale_ratio", type=float, default=2.62)
     parser.add_argument("--offset_x", type=float, default=0.55)
     parser.add_argument("--offset_y", type=float, default=1.0)
@@ -100,9 +101,9 @@ def get_thermal_args():
 def get_scale_args():
     parser = ArgumentParser("SCALE")
     parser.add_argument("--selfharm", type=int, default=4)
-    parser.add_argument("--falldown", type=int, default=1)
+    parser.add_argument("--falldown", type=int, default=2)
     parser.add_argument("--emotion", type=int, default=1)
-    parser.add_argument("--violence", type=int, default=0)
+    parser.add_argument("--violence", type=int, default=2)
     args = parser.parse_args()
     return args
 

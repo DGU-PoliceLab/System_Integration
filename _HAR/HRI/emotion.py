@@ -54,7 +54,7 @@ def Emotion(data_pipe, event_pipe):
                 if debug_args.visualize:    
                     visualizer.merge_img_to_video()
                 break
-            tracks, meta_data, face_detections, frame = data
+            tracks, meta_data, face_detections, frame, combine_data = data
             num_frame = meta_data['num_frame']
             event_count = 0
             for i, track in enumerate(tracks):
@@ -95,25 +95,21 @@ def Emotion(data_pipe, event_pipe):
                         predicted_emotion = torch.argmax(e_out).item()
                         emotion = emotion_to_class[predicted_emotion]
                         
-                        logger.info(f"emotion Label: {emotion}")
-                        event_pipe.send({'action': emotion, 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime']})
-                        event_count += 1
+                        ############
+                        cctv_id = meta_data['cctv_id']
+                        file_name = f"{cctv_id}/{meta_data['timestamp']}_{tid}.jpg"
+                        cv2.imwrite(f"/System_Integration/_Output/NAS/{file_name}", face_img) #TODO TEMP
+                        ######
+                        
+                        ### TODO need image id correct 
+                        
+                        ##
+                        logger.info(f"emotion Label: {emotion} {combine_data}")
+                        event_pipe.send({'action': emotion, 'id':tid, 'cctv_id':meta_data['cctv_id'], 
+                                         'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name'],
+                                         'combine_data': combine_data, 'db_insert_file_path':file_name}) #TODO action is not emotion
+                        event_count += 1                        
 
-                        if debug_args.visualize:
-                            hx1 = int(hbox[0])
-                            hy1 = int(hbox[1])
-                            hx2 = int(hbox[2])
-                            hy2 = int(hbox[3])
-                            cv2.rectangle(meta_data['v_frame'], (hx1, hy1), (hx2, hy2), (255, 0, 0), 2)
-                            font =  cv2.FONT_HERSHEY_PLAIN
-                            ret_string = f'frame: {num_frame} id: {tid}  action: {emotion}'
-
-                            cv2.putText(meta_data['v_frame'], ret_string, (350, 40*event_count), font, 2, (255, 0, 0), 2, cv2.LINE_AA)
-                  
-            if debug_args.visualize:
-                if init_flag == True:
-                    visualizer.mkdir(meta_data['timestamp'])
-                    init_flag = False
-                visualizer.save_temp_image([meta_data["v_frame"], None, None], num_frame)
+                        # [{'tid': 2, 'temperature': 34.01934283088236, 'breath': 30, 'heart': None}]
         else:
             time.sleep(0.0001)
