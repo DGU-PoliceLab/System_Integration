@@ -45,5 +45,5 @@ WORKDIR /
 RUN git clone https://github.com/DGU-PoliceLab/workspace/policelab-git/System_Integration.git
 WORKDIR /workspace/policelab-git/System_Integration
 # After running the Docker container, run the command below. (/System_Integeration)
-# RUN bash setting.sh
+# RUN bash Scripts/setting.sh
 CMD ["bash"]
