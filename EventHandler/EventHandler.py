@@ -1,9 +1,9 @@
 import time
 from multiprocessing import Process, Pipe, Queue
-from _Utils.logger import get_logger
+from Utils.logger import get_logger
 from threading import Thread
 from queue import Queue
-from variable import get_falldown_args, get_debug_args, get_arg
+from variable import get_debug_args, get_arg
 import pymysql
 import os
 import pika
@@ -29,7 +29,6 @@ mq_config = {
 }
 
 logger = get_logger(name= '[EVENT]', console= True, file= True)
-
 
 class EventHandler:
     def __init__(self):

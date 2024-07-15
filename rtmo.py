@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, "/System_Integration/_PoseEstimation/")
+sys.path.insert(0, "/workspace/policelab-git/System_Integration/PoseEstimation/")
 from argparse import ArgumentParser
 from typing import Dict
 import cv2
@@ -7,7 +7,7 @@ import ffmpegcv
 from datetime import datetime
 from queue import Queue
 
-from _Utils.logger import get_logger
+from Utils.logger import get_logger
 
 from mmpose.apis.inferencers import MMPoseInferencer, get_model_aliases
 
@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument(
         '--pose2d-weights',
         type=str,
-        default="_PoseEstimation/mmlab/mmpose/checkpoints/rtmo-l_16xb16-600e_body7-640x640-b37118ce_20231211.pth",
+        default="PoseEstimation/mmlab/mmpose/checkpoints/rtmo-l_16xb16-600e_body7-640x640-b37118ce_20231211.pth",
         help='Path to the custom checkpoint file of the selected pose model. '
         'If it is not specified and "pose2d" is a model name of metafile, '
         'the weights will be loaded from metafile.')
@@ -231,7 +231,7 @@ def main(log_opt=[True, True]):
 
 def rtmo(source, rtmo_queue, log_opt=["RTMO", False, False]):
     logger = get_logger(name = '[RTMO]', console=False, file=False)
-    init_args = {'pose2d': 'rtmo', 'pose2d_weights': "_PoseEstimation/mmlab/mmpose/checkpoints/rtmo-l_16xb16-600e_body7-640x640-b37118ce_20231211.pth", 'scope': 'mmpose', 'device': None, 'det_model': None, 'det_weights': None, 'det_cat_ids': 0, 'pose3d': None, 'pose3d_weights': None, 'show_progress': False}
+    init_args = {'pose2d': 'rtmo', 'pose2d_weights': "PoseEstimation/mmlab/mmpose/checkpoints/rtmo-l_16xb16-600e_body7-640x640-b37118ce_20231211.pth", 'scope': 'mmpose', 'device': None, 'det_model': None, 'det_weights': None, 'det_cat_ids': 0, 'pose3d': None, 'pose3d_weights': None, 'show_progress': False}
     call_args = {'inputs': source, 'show': False, 'draw_bbox': True, 'draw_heatmap': False, 'bbox_thr': 0.5, 'nms_thr': 0.65, 'pose_based_nms': True, 'kpt_thr': 0.3, 'tracking_thr': 0.3, 'use_oks_tracking': False, 'disable_norm_pose_2d': False, 'disable_rebase_keypoint': False, 'num_instances': 1, 'radius': 3, 'thickness': 1, 'skeleton_style': 'mmpose', 'black_background': False, 'vis_out_dir': '', 'pred_out_dir': '', 'vis-out-dir': '_Output'}
     inferencer = MMPoseInferencer(**init_args)
     cur_frame = 0

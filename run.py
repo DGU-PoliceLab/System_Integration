@@ -1,10 +1,11 @@
 import sys
-sys.path.insert(0, "/System_Integration/")
-sys.path.insert(0, "/System_Integration/_PoseEstimation/mmlab")
-sys.path.insert(0, "/System_Integration/_Tracker")
-sys.path.insert(0, "/System_Integration/_HAR")
-sys.path.insert(0, "/System_Integration/_MOT")
+sys.path.insert(0, "/workspace/policelab-git/System_Integration/")
+sys.path.insert(0, "/workspace/policelab-git/System_Integration/PoseEstimation/mmlab")
+sys.path.insert(0, "/workspace/policelab-git/System_Integration/Tracker")
+sys.path.insert(0, "/workspace/policelab-git/System_Integration/HAR")
+sys.path.insert(0, "/workspace/policelab-git/System_Integration/MOT")
 import os
+import signal
 import copy
 from multiprocessing import Process, Pipe
 import cv2
@@ -15,31 +16,31 @@ import json
 from datetime import datetime
 import atexit
 
-from _Tracker.BoTSORT.tracker.bot_sort import BoTSORT
-from EventHandler.EventHandler import EventHandler
-from _Sensor.sensor import Sensor
+from Tracker.BoTSORT.tracker.bot_sort import BoTSORT
+# from EventHandler.EventHandler import EventHandler
+from Sensor.sensor import Sensor
 # from Sensor.edge_cam import EdgeCam, Radar, Thermal, Camera
-from _Utils.logger import get_logger
-from _Utils.head_bbox import *
-from _Utils.pipeline import *
-import _Utils.draw_bbox_skeleton as draw_bbox_skeleton 
-import _Utils.draw_vital as draw_vital
-import _MOT.face_detection as face_detection
-from _HAR.PLASS.selfharm import Selfharm
-from _HAR.CSDC.falldown import Falldown
-from _HAR.HRI.emotion import Emotion
-from _HAR.MHNCITY.violence.violence import Violence
+from Utils.logger import get_logger
+from Utils.head_bbox import *
+from Utils.pipeline import *
+import Utils.draw_bbox_skeleton as draw_bbox_skeleton 
+import Utils.draw_vital as draw_vital
+import MOT.face_detection as face_detection
+from HAR.PLASS.selfharm import Selfharm
+from HAR.CSDC.falldown import Falldown
+from HAR.HRI.emotion import Emotion
+from HAR.MHNCITY.violence.violence import Violence
 from variable import get_root_args, get_sort_args, get_scale_args, get_debug_args, get_rader_args, get_thermal_args
 from rtmo import get_model
 
-from _DB.db_controller import connect_db, insert_event, insert_realtime
-from _DB.mq_controller import connect_mq
-from _DB.event_controller import collect_evnet
-from _DB.snapshot_controller import object_snapshot_control
+from DB.db_controller import connect_db, insert_event, insert_realtime
+from DB.mq_controller import connect_mq
+from DB.event_controller import collect_evnet
+from DB.snapshot_controller import object_snapshot_control
 
 def main():
     # 출력 로그 설정
-    logger = get_logger(name= '[RUN]', console= False, file= False)
+    logger = get_logger(name= '[RUN]', console= True, file= False)
     # 루트 인자 및 기타 인자 설정
     args = get_root_args()
     dict_args = vars(args)
@@ -122,17 +123,17 @@ def main():
 
     # 디버그 모드
     if debug_args.debug == True:
-        # source = debug_args.source
-        # cctv_info = dict()
-        # cctv_info['id'] = debug_args.cctv_id
-        # cctv_info['ip'] = debug_args.cctv_ip
-        # cctv_info['name'] = debug_args.cctv_name
-        # thermal_info = dict()
-        # thermal_info['ip'] = debug_args.thermal_ip
-        # thermal_info['port'] = debug_args.thermal_port
-        # rader_data = None
-        # with open(debug_args.rader_data, 'r') as f:
-        #     rader_data = json.load(f)
+        source = debug_args.source
+        cctv_info = dict()
+        cctv_info['cctv_id'] = debug_args.cctv_id
+        cctv_info['ip'] = debug_args.cctv_ip
+        cctv_info['cctv_name'] = debug_args.cctv_name
+        thermal_info = dict()
+        thermal_info['ip'] = debug_args.thermal_ip
+        thermal_info['port'] = debug_args.thermal_port
+        rader_data = None
+        with open(debug_args.rader_data, 'r') as f:
+            rader_data = json.load(f)
         pass
     else:
         try:
@@ -140,16 +141,14 @@ def main():
             if conn.open:
                 if dict_args['video_file'] != "":
                     cctv_info = get_cctv_info(conn)
+                    cctv_info = cctv_info[1]
+                    source = cctv_info['cctv_ip']
             else:
                 logger.warning('RUN-CCTV Database connection is not open.')
                 cctv_info = {'cctv_id': 404}
         except Exception as e:
             logger.warning(f'Unable to connect to database, error: {e}')
             cctv_info = {'cctv_id': 404}
-
-        cctv_info = cctv_info[1]
-        source = cctv_info['cctv_ip']
-        # source = "./_Input/videos/cctv1_fight_6.mp4"
 
     # 사람 감지 및 추적을 위한 모델 로드
     inferencer, init_args, call_args, display_alias = get_model()
@@ -195,7 +194,7 @@ def main():
             else:
                 time.sleep(0.1)
 
-    # _HAR 모듈 실행 대기
+    # HAR 모듈 실행 대기
     if 'selfharm' in args.modules:
         for i in range(scale_args.selfharm):
             wait_subprocess_ready("Selfharm", selfharm_pipe_list[i][0], logger)
@@ -210,8 +209,8 @@ def main():
             wait_subprocess_ready("Violence", violence_pipe_list[i][0], logger)
 
     # 종료 함수
-    def shut_down():
-        print("ShutDown!")
+    def shut_down(sig=None, frame=None):
+        logger.warning("Terminated by user input.")
         if 'selfharm' in args.modules:
             for p in selfharm_pipe_list:
                 p[0].send("end_flag")
@@ -225,7 +224,10 @@ def main():
             for p in violence_pipe_list:
                 p[0].send("end_flag")
         event_process.kill()
-    atexit.register(shut_down)
+        os._exit()
+
+    # atexit.register(shut_down)
+    signal.signal(signal.SIGINT, shut_down)
     
     # 사람 감지 및 추적
     while cap.isOpened():
@@ -274,15 +276,15 @@ def main():
                 logger.info(combine_data)
                            
             # 모듈로 데이터 전송
-            # if 'selfharm' in args.modules and 0 < scale_args.selfharm:
-            #     selfharm_pipe_list[num_frame % scale_args.selfharm][0].send([tracks, meta_data])
-            # if 'falldown' in args.modules and 0 < scale_args.falldown:
-            #     falldown_pipe_list[num_frame % scale_args.falldown][0].send([tracks, meta_data])
+            if 'selfharm' in args.modules and 0 < scale_args.selfharm:
+                selfharm_pipe_list[num_frame % scale_args.selfharm][0].send([tracks, meta_data])
+            if 'falldown' in args.modules and 0 < scale_args.falldown:
+                falldown_pipe_list[num_frame % scale_args.falldown][0].send([tracks, meta_data])
             if num_frame % fps == 0:
                 if 'emotion' in args.modules and 0 < scale_args.emotion:
                     emotion_pipe_list[num_frame % scale_args.emotion][0].send([tracks, meta_data, face_detections, frame, combine_data])
-            # if 'violence' in args.modules and 0 < scale_args.violence:
-            #     violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])
+            if 'violence' in args.modules and 0 < scale_args.violence:
+                violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])
                             
             num_frame += 1
         else:

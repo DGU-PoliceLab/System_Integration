@@ -42,8 +42,8 @@ RUN mim install mmengine
 
 # Set the default command to run when the container starts
 WORKDIR /
-RUN git clone https://github.com/DGU-PoliceLab/System_Integration.git
-WORKDIR /System_Integration
+RUN git clone https://github.com/DGU-PoliceLab/workspace/policelab-git/System_Integration.git
+WORKDIR /workspace/policelab-git/System_Integration
 # After running the Docker container, run the command below. (/System_Integeration)
 # RUN bash setting.sh
 CMD ["bash"]

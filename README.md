@@ -33,7 +33,7 @@
 ### 설치
 
 본 시스템은 도커 환경을 권장합니다.
-[🐳 Dockerfile](https://github.com/DGU-PoliceLab/System_Integration/blob/main/Dockerfile)
+[🐳 Dockerfile](https://github.com/DGU-PoliceLab/workspace/policelab-git/System_Integration/blob/main/Dockerfile)
 
 1. 도커 이미지 생성
    ```bash
@@ -45,7 +45,7 @@
    ```
 3. 도커 진입 후, 설정 진행
    ```bash
-   bash /System_Integration/_Scripts/setting.sh
+   bash /workspace/policelab-git/System_Integration/_Scripts/setting.sh
    ```
 
 ## 실행

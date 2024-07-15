@@ -19,9 +19,8 @@ def get_arg(category = None, arg= None):
 def get_root_args():
     parser = ArgumentParser()
     parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "longterm", "violence"],help='running modules')
-    # parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "snapshot", "violence", "thermal"],help='running modules')
     parser.add_argument('--test', type=str, default='test',help='test')
-    parser.add_argument('--nas_path', type=str, default= "/System_Integration/_Output/NAS", help='NAS path'),
+    parser.add_argument('--nas_path', type=str, default= "/workspace/policelab-git/System_Integration/Output/NAS", help='NAS path'),
     parser.add_argument('--img-size', type=int, default=1080, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.7, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.3, help='IOU threshold for NMS')
@@ -56,8 +55,8 @@ def get_root_args():
     # CMC
     parser.add_argument("--cmc-method", default="orb", type=str, help="cmc method: files (Vidstab GMC) | orb | ecc")
     # RTMO
-    parser.add_argument('--rtmo-config', type=str, default="_PoseEstimation/mmlab/configs/body_2d_keypoint/rtmo/body7/rtmo-l_16xb16-600e_body7-640x640.py", help='mmpose rtmo checkpoint')
-    parser.add_argument('--rtmo_checkpoint', type=str, default="_PoseEstimation/mmlab/mmpose/checkpoints/rtmo-l_16xb16-600e_body7-640x640-b37118ce_20231211.pth", help='mmpose rtmo checkpoint')
+    parser.add_argument('--rtmo-config', type=str, default="PoseEstimation/mmlab/configs/body_2d_keypoint/rtmo/body7/rtmo-l_16xb16-600e_body7-640x640.py", help='mmpose rtmo checkpoint')
+    parser.add_argument('--rtmo_checkpoint', type=str, default="PoseEstimation/mmlab/mmpose/checkpoints/rtmo-l_16xb16-600e_body7-640x640-b37118ce_20231211.pth", help='mmpose rtmo checkpoint')
     # Event Delay
     parser.add_argument('--event_delay', type=int, default=9, help='Event insert delay time')
     args = parser.parse_args()
@@ -67,18 +66,18 @@ def get_root_args():
 
 def get_debug_args():
     parser = ArgumentParser("DEBUG")
-    parser.add_argument("--debug", type=bool, default=False)
+    parser.add_argument("--debug", type=bool, default=True)
     parser.add_argument("--visualize", type=bool, default=False)
-    parser.add_argument("--source", type=str, default="rtsp://admin:wonwoo0!23@172.30.1.42/stream1")
+    parser.add_argument("--source", type=str, default="rtsp://admin:admin@172.30.1.30/stream1")
     parser.add_argument("--output", type=str, default="_Output")
     parser.add_argument("--cctv_id", type=int, default=-1)
-    parser.add_argument("--cctv_ip", type=str, default="rtsp://admin:wonwoo0!23@172.30.1.42/stream1")
+    parser.add_argument("--cctv_ip", type=str, default="rtsp://admin:admin@172.30.1.30/stream1")
     parser.add_argument("--cctv_name", type=int, default=-1)
-    parser.add_argument("--thermal_ip", type=str, default="172.30.1.21")
+    parser.add_argument("--thermal_ip", type=str, default="172.30.1.40")
     parser.add_argument("--thermal_port", type=int, default=10603)
-    parser.add_argument("--rader_ip", type=str, default="172.30.1.51")
+    parser.add_argument("--rader_ip", type=str, default="172.30.1.50")
     parser.add_argument("--rader_port", type=int, default=5000)
-    parser.add_argument("--rader_data", type=str, default="_Input/data/rader_data.json")
+    parser.add_argument("--rader_data", type=str, default="Input/data/rader_data.json")
     args = parser.parse_args()
     return args
 
@@ -91,7 +90,7 @@ def get_rader_args():
 def get_thermal_args():
     parser = ArgumentParser("THERMAL")
     parser.add_argument("--use_thermal", type=bool, default=True)
-    parser.add_argument("--use_reconnect", type=bool, default=True)
+    parser.add_argument("--use_reconnect", type=bool, default=False)
     parser.add_argument("--scale_ratio", type=float, default=2.62)
     parser.add_argument("--offset_x", type=float, default=0.55)
     parser.add_argument("--offset_y", type=float, default=1.0)
@@ -117,9 +116,9 @@ def get_falldown_args():
 
 def get_selfharm_args():
     parser = ArgumentParser(description='Selfharm')
-    parser.add_argument('--config', default="_HAR/PLASS/models/config.py", help='skeleton model config file path')
-    parser.add_argument('--checkpoint', default="_HAR/PLASS/models/checkpoint.pth", help='skeleton model checkpoint file/url')
-    parser.add_argument('--label-map', default='_HAR/PLASS/models/labelmap.txt', help='label map file')
+    parser.add_argument('--config', default="HAR/PLASS/models/config.py", help='skeleton model config file path')
+    parser.add_argument('--checkpoint', default="HAR/PLASS/models/checkpoint.pth", help='skeleton model checkpoint file/url')
+    parser.add_argument('--label-map', default='HAR/PLASS/models/labelmap.txt', help='label map file')
     parser.add_argument('--device', type=str, default='cuda:0', help='CPU/CUDA device option')
     parser.add_argument('--step-size', type=int, default=10, help='inference step size')
     parser.add_argument('--thread_mode', type=bool, default=False, help='use inference thread')
@@ -128,7 +127,7 @@ def get_selfharm_args():
 
 def get_emotion_args():
     parser = ArgumentParser(description="Emotion")
-    parser.add_argument('--model_state', type=str, default='_HAR/HRI/models/model_state.pth', help='model state checkpoint path')
+    parser.add_argument('--model_state', type=str, default='HAR/HRI/models/model_state.pth', help='model state checkpoint path')
     parser.add_argument('--face_detector', type=str, default='RetinaNetResNet50', help='DSFDDetector/RetinaNetResNet50')
     parser.add_argument('--device', type=str, default='cuda', help='CPU/CUDA device option')
     args = parser.parse_args()
@@ -174,8 +173,8 @@ def get_sort_args():
     parser.add_argument("--cmc-method", default="orb", type=str, help="cmc method: files (Vidstab GMC) | orb | ecc")
     # ReID
     parser.add_argument("--with-reid", dest="with_reid", default=False, action="store_true", help="test mot20.")
-    parser.add_argument("--fast-reid-config", dest="fast_reid_config", default="_Tracker/BoTSORT/fast_reid/configs/MOT17/sbs_S50.yml", type=str, help="reid config file path")
-    parser.add_argument("--fast-reid-weights", dest="fast_reid_weights", default="_Tracker/BoTSORT/fast_reid/checkpoints/MOT17/mot17_sbs_S50.pth", type=str,help="reid config file path")
+    parser.add_argument("--fast-reid-config", dest="fast_reid_config", default="Tracker/BoTSORT/fast_reid/configs/MOT17/sbs_S50.yml", type=str, help="reid config file path")
+    parser.add_argument("--fast-reid-weights", dest="fast_reid_weights", default="Tracker/BoTSORT/fast_reid/checkpoints/MOT17/mot17_sbs_S50.pth", type=str,help="reid config file path")
     parser.add_argument('--proximity_thresh', type=float, default=0.5, help='threshold for rejecting low overlap reid matches')
     parser.add_argument('--appearance_thresh', type=float, default=0.25, help='threshold for rejecting low appearance similarity reid matches')
     args = parser.parse_args()
