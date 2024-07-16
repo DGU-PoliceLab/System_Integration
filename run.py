@@ -16,7 +16,6 @@ from datetime import datetime
 import atexit
 
 from Tracker.BoTSORT.tracker.bot_sort import BoTSORT
-from EventHandler.EventHandler import EventHandler
 from Sensor.sensor import Sensor
 from Utils.logger import get_logger
 from Utils.head_bbox import *
@@ -36,7 +35,7 @@ from DB.event_controller import collect_evnet
 
 def main():
     # 출력 로그 설정
-    logger = get_logger(name= '[RUN]', console= True, file= False)
+    logger = get_logger(name= '[RUN]', console= False, file= False)
     # 루트 인자 및 기타 인자 설정
     args = get_root_args()
     dict_args = vars(args)
@@ -125,6 +124,7 @@ def main():
             if conn.open:
                 if dict_args['video_file'] != "":
                     cctv_info = get_cctv_info(conn)
+                    print(f"cctv_info : {cctv_info}")
                     cctv_info = cctv_info[1]
                     source = cctv_info['cctv_ip']
             else:
@@ -134,6 +134,7 @@ def main():
             logger.warning(f'Unable to connect to database, error: {e}')
             cctv_info = {'cctv_id': 404}
 
+    print("")
     # 사람 감지 및 추적을 위한 모델 로드
     inferencer, init_args, call_args, display_alias = get_model()
     # 얼굴 감지 모델 로드

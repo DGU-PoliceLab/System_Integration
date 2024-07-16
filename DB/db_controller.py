@@ -14,7 +14,7 @@ QUEUE_EMPTY_INTERVAL = 1
 HEART_RATE_THRESHOLD = 100
 BREATH_RATE_THRESHOLD = 100
 EMOTION_THRESHOLD = 2
-LOGGER = get_logger(name = '[DB]', console=True, file=True)
+LOGGER = get_logger(name = '[DB]', console=False, file=False)
 
 def connect_db(db = None):
     if db != None:
@@ -71,20 +71,23 @@ def insert_snapshot(data_list, conn, mq_conn):
     
     
     LOGGER.info(f"insert_snapshot")
+    LOGGER.info(f"data: {data_list}")
     
     try:
         with conn.cursor() as cur:
             # Delete existing data
-            delete_sql = "DELETE FROM people WHERE cctv_id = %s"
-            cur.execute(delete_sql, (data_list[0][0],))
+            if len(data_list) > 0:
+                delete_sql = "DELETE FROM people WHERE cctv_id = %s"
+                cur.execute(delete_sql, (data_list[0][0],))
             for data in data_list:
                 sql = """
                 INSERT INTO people  
-                (cctv_id, people_name, people_color_num, people_thumbnail_location) 
-                VALUES (%s,%s,%s,%s)
+                (people_id, cctv_id, people_name, people_color_num, people_thumbnail_location) 
+                VALUES (%s, %s,%s,%s,%s)
                 """
+                # print(f"")
                 # DB에 삽입할 값 설정
-                values = [data[0], data[2], data[1], data[3]]
+                values = [data[1], data[0], data[2], data[1], data[3]]
                 cur.execute(sql, values)
             conn.commit()           
         
@@ -161,7 +164,7 @@ def insert_event(event_queue, conn, mq_conn):
     """
     
     # event insert delay code start
-    LAST_EVENT_TIME = {"falldown": None, "selfharm": None}
+    LAST_EVENT_TIME = {"falldown": None, "selfharm": None, "longterm_status": None, "violence": None}
     DELAY_TIME = get_arg('root', 'event_delay')
 
     def str_to_second(time_str):
@@ -189,17 +192,17 @@ def insert_event(event_queue, conn, mq_conn):
     while True:
         event = event_queue.get()
         if event is not None:
-            cctv_id = event['cctv_id']
             event_type = event['action']
-            track_id = event['id']
-
-            if event_type != "emotion":                                    
+            if event_type == "emotion":                                    
                 combine_list = event['combine_list']                                
                 snapshot_data_list = []
                 body_data_list = []                
                 for emotion_data in combine_list: 
+                    cctv_id = emotion_data['cctv_id']
+                    track_id = emotion_data['id']
+
                     emotion_index = emotion_data['emotion_index']
-                    db_insert_file_path = event['db_insert_file_path'] #TODO rename
+                    db_insert_file_path = emotion_data['db_insert_file_path'] #TODO rename
 
                     combine_dict = emotion_data['combine_dict']               
                     body_temperature = combine_dict['temperature']
@@ -217,11 +220,14 @@ def insert_event(event_queue, conn, mq_conn):
                     snapshot_data_list.append(s_data)
                     b_data = [cctv_id, people_id, heartbeat_rate, breath_rate, body_temperature, emotion_index, realtime_datetime]
                     body_data_list.append(b_data)            
-                    
+                print(f"insert_snapshot 호출 전 snapshot_data_list : {snapshot_data_list}")
                 insert_snapshot(snapshot_data_list, conn, mq_conn)  
                 insert_realtime(body_data_list, conn)  
                 continue
-            try:            
+            try:
+                cctv_id = event['cctv_id']
+                event_type = event['action']
+                track_id = event['id']       
                 event_location = event['location']
                 current_datetime = event['current_datetime']
                 event_date = copy.deepcopy(str(current_datetime)[:10])

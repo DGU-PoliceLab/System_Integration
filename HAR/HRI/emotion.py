@@ -93,9 +93,13 @@ def Emotion(data_pipe, event_pipe):
                         fy1 = int(hbox[1])
                         fx2 = int(hbox[2])
                         fy2 = int(hbox[3])
-
-                        face_img = frame[fy1:fy2, fx1:fx2, :]                    
-                        face_img_transformed = use_transforms(Image.fromarray(face_img).convert('RGB')).unsqueeze(0).to(args.device)
+                        
+                        face_img = frame[fy1:fy2, fx1:fx2, :]
+                        try:       
+                            face_img_transformed = use_transforms(Image.fromarray(face_img).convert('RGB')).unsqueeze(0).to(args.device)
+                        except Exception as e:
+                            logger.warning(f"error: {e}")
+                            continue
                         e_out, _, _ = model(face_img_transformed)
                         predicted_emotion = torch.argmax(e_out).item()
                         emotion = emotion_to_class[predicted_emotion]
@@ -104,22 +108,23 @@ def Emotion(data_pipe, event_pipe):
 
                         file_name = f"{meta_data['timestamp']}_{tid}.jpg"
                         cv2.imwrite(f"{snapshot_path}/{file_name}", face_img) #TODO TEMP
-                        
-                        index_combine = -1
+                        file_name = f"{cctv_id}/{file_name}"
+
+                        combine_result_data = {'tid': tid, 'temperature': None, 'breath': None, 'heart': None}
                         for i in range(len(combine_data)):
                             if combine_data[i]['tid'] == tid:
-                                index_combine = tid
-                        if index_combine == -1:
-                            logger.error("can't matching index_combine")
-                            exit()
+                                combine_result_data = combine_data[i]
+
                         try:
                             emotion_index = map_emotion_to_index(emotion)
-                            combine_list.append({'emotion_index': emotion_index, 'id':tid, 'cctv_id':meta_data['cctv_id'], 
+                            combined_emotion_data = {'emotion_index': emotion_index, 'id':tid, 'cctv_id':meta_data['cctv_id'], 
                                             'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name'],
-                                            'combine_dict': combine_data[index_combine], 'db_insert_file_path':file_name})
+                                            'combine_dict': combine_result_data, 'db_insert_file_path':file_name}
+                            logger.debug(f"combined_emotion_data: {combined_emotion_data}")
+                            combine_list.append(combined_emotion_data)
                         except Exception as e:
                             logger.warning(e)
-                        
+            logger.debug(f"combine_list: {combine_list}")
             event_pipe.send({'action': "emotion", "combine_list": combine_list})
         else:
             time.sleep(0.0001)

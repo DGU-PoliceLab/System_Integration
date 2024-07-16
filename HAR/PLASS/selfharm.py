@@ -14,6 +14,7 @@ EVENT = ["normal", 0.0]
 
 def pre_processing(tracks):
     form = {
+        'tid': None,
         'bbox_scores': [],
         'bboxes': [],
         'keypoints_visible': [],
@@ -21,6 +22,7 @@ def pre_processing(tracks):
         'keypoints': []
     }
     for track in tracks:
+        form['tid'] = track.track_id
         bbox_score = track.score
         form['bbox_scores'].append(bbox_score)
         bbox = track.tlbr
@@ -45,22 +47,25 @@ def pre_processing(tracks):
 def inference(model, label_map, pose_data, meta_data, pipe, logger):
     global EVENT
     try:
-        result = inference_skeleton(model, pose_data, (meta_data[0]['frame_size']))
+        tid = pose_data[-1]['tid']
+        result = inference_skeleton(model, pose_data, (meta_data[-1]['frame_size']))
         max_pred_index = result.pred_score.argmax().item()
         action_label = label_map[max_pred_index]
         confidence = result.pred_score[max_pred_index]
         logger.debug(f"action: {action_label}")
-        if action_label == 'selfharm':
-            logger.info(f"selfharm detected! {meta_data[0]['current_datetime']}")
-            pipe.send({'action': action_label, 'id': 1, 'cctv_id': meta_data[0]['cctv_id'], 'current_datetime': meta_data[0]['current_datetime']
-                       , 'location':meta_data['cctv_name'], 'combine_data': None})
+        if action_label != 'normal' and confidence > 0.85:
+            print("selfharm", confidence)
+            logger.info(f"selfharm detected! {meta_data[-1]['current_datetime']}")
+            pipe.send({'action': "selfharm", 'id':tid, 'cctv_id':meta_data[-1]['cctv_id'], 'current_datetime':meta_data[-1]['current_datetime'], 'location':meta_data[-1]['cctv_name'], 'combine_data': None})
+        else:
+            print("normal", confidence)
         EVENT = [action_label, confidence]
     except Exception as e:
         logger.error(f'Error occured in inference_thread, error: {e}')
 
 def Selfharm(data_pipe, event_pipe):
     global EVENT
-    logger = get_logger(name="[PLASS]", console=True, file=False)
+    logger = get_logger(name="[PLASS]", console=False, file=False)
     args = get_selfharm_args()
     debug_args = get_debug_args()
     if debug_args.visualize:
