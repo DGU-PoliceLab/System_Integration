@@ -60,7 +60,7 @@ def pad_keypoints(keypoints, num_persons, num_keypoints):
 
 
 def Violence(data_pipe, event_pipe):
-    logger = get_logger(name="[MhnCity.Violence]", console=False, file=False)
+    logger = get_logger(name="[MhnCity.Violence]", console=True, file=False)
     args = parse_args()
     fight_model_1 = TemporalDynamicGCN(window_size=args.window_size, num_frames=args.num_frames, num_persons=args.num_persons, num_keypoints=args.num_keypoints, num_features=2, num_classes=1, model_path=args.model_1)
     fight_model_1 = fight_model_1.to(args.device)
@@ -122,5 +122,6 @@ def Violence(data_pipe, event_pipe):
                     all_batch_keypoints = []        
             else:
                 time.sleep(0.0001)
-        finally:
-            logger.warning("Violence process end.")
+        except Exception as e:
+            logger.error(f"Error occured in violence, {e}")
+        

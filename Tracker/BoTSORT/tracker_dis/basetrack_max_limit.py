@@ -42,6 +42,7 @@ class BaseTrack(object):
             if BaseTrack._available_ids:
                 return BaseTrack._available_ids.pop()  # 재사용 가능한 ID가 있으면 반환
             if BaseTrack._count >= BaseTrack._max_count:
+                print(BaseTrack._count)
                 print("basetrack.py : 최대 객체 수를 초과했습니다. 일단 넘어감.")
                 return BaseTrack.person_track_count
                 

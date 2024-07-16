@@ -12,6 +12,7 @@ from variable import get_emotion_args, get_debug_args
 from multiprocessing import Process, Pipe
 import cv2
 
+
 def map_emotion_to_index(emotion):
     if emotion == 'NE':
         return 0
@@ -33,7 +34,7 @@ def Emotion(data_pipe, event_pipe):
         [
             transforms.Resize((260,260)),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406] , std=[0.229, 0.224, 0.225])
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ]
         )
 
@@ -45,74 +46,80 @@ def Emotion(data_pipe, event_pipe):
     model.eval()
    
     data_pipe.send(True)
-    while True:
-        try:
-            data = data_pipe.recv()
-            if data:
-                if data == "end_flag":
-                    logger.warning("Emotion process end.")
-                    if debug_args.visualize:    
-                        visualizer.merge_img_to_video()
-                    break
-                tracks, meta_data, face_detections, frame, combine_data = data
-                num_frame = meta_data['num_frame']
-                event_count = 0
-                for i, track in enumerate(tracks):
-                    bbox = track.tlbr
-                    tid = track.track_id
+    while True:        
+        data = data_pipe.recv()
+        if data:
+            if data == "end_flag":
+                logger.warning("Emotion process end.")
+                if debug_args.visualize:    
+                    visualizer.merge_img_to_video()
+                break
+            tracks, meta_data, face_detections, frame, combine_data = data
+            num_frame = meta_data['num_frame']
+            event_count = 0
+            cctv_id = str(meta_data['cctv_id'])
 
-                    if face_detections is not None:
-                        for i in range(face_detections.shape[0]):
-                            hbox = face_detections[i][0:4]
+            import os #TODO TEMP
+            snapshot_path = "/System_Integration/Output/NAS/"+cctv_id
+            os.makedirs(snapshot_path, exist_ok = True)
 
-                            def check_hbox(bbox, hbox):
-                                bx1 = int(bbox[0])
-                                by1 = int(bbox[1])
-                                bx2 = int(bbox[2])
-                                by2 = int(bbox[3])  
+            combine_list = []
+            for i, track in enumerate(tracks):
+                bbox = track.tlbr
+                tid = track.track_id
 
-                                hx1 = int(hbox[0])
-                                hy1 = int(hbox[1])
-                                hx2 = int(hbox[2])
-                                hy2 = int(hbox[3])
+                if face_detections is not None: #TEMP 3중 루프문임. 수정 요망.
+                    for i in range(face_detections.shape[0]):
+                        hbox = face_detections[i][0:4]
 
-                                if bx1 <= hx1 and by1 <= hy1 and bx2 >= hx2 and by2 >= hy2:
-                                    return True
-                                else:
-                                    return False
-
-                            if check_hbox(bbox=bbox, hbox=hbox) == False:
-                                continue
-
-                            fx1 = int(hbox[0])
-                            fy1 = int(hbox[1])
-                            fx2 = int(hbox[2])
-                            fy2 = int(hbox[3])
-
-                            face_img = frame[fy1:fy2, fx1:fx2, :]                    
-                            face_img_transformed = use_transforms(Image.fromarray(face_img).convert('RGB')).unsqueeze(0).to(args.device)
-                            e_out, _, _ = model(face_img_transformed)
-                            predicted_emotion = torch.argmax(e_out).item()
-                            emotion = emotion_to_class[predicted_emotion]
+                        def check_hbox(bbox, hbox):
+                            bx1 = int(bbox[0])
+                            by1 = int(bbox[1])
+                            bx2 = int(bbox[2])
+                            by2 = int(bbox[3])
+                            hx1 = int(hbox[0])
+                            hy1 = int(hbox[1])
+                            hx2 = int(hbox[2])
+                            hy2 = int(hbox[3])
+                            if bx1 <= hx1 and by1 <= hy1 and bx2 >= hx2 and by2 >= hy2:
+                                return True
+                            else:
+                                return False
                             
-                            ############
-                            cctv_id = meta_data['cctv_id']
-                            file_name = f"{cctv_id}/{meta_data['timestamp']}_{tid}.jpg"
-                            cv2.imwrite(f"/System_Integration/Output/NAS/{file_name}", face_img) #TODO TEMP
-                            ######
-                            
-                            ### TODO need image id correct 
-                            
-                            ##
-                            logger.info(f"emotion Label: {emotion} {combine_data}")
-                            event_pipe.send({'action': emotion, 'id':tid, 'cctv_id':meta_data['cctv_id'], 
+                        if check_hbox(bbox=bbox, hbox=hbox) == False:
+                            continue
+
+                        fx1 = int(hbox[0])
+                        fy1 = int(hbox[1])
+                        fx2 = int(hbox[2])
+                        fy2 = int(hbox[3])
+
+                        face_img = frame[fy1:fy2, fx1:fx2, :]                    
+                        face_img_transformed = use_transforms(Image.fromarray(face_img).convert('RGB')).unsqueeze(0).to(args.device)
+                        e_out, _, _ = model(face_img_transformed)
+                        predicted_emotion = torch.argmax(e_out).item()
+                        emotion = emotion_to_class[predicted_emotion]
+                        
+                        cctv_id = meta_data['cctv_id']
+
+                        file_name = f"{meta_data['timestamp']}_{tid}.jpg"
+                        cv2.imwrite(f"{snapshot_path}/{file_name}", face_img) #TODO TEMP
+                        
+                        index_combine = -1
+                        for i in range(len(combine_data)):
+                            if combine_data[i]['tid'] == tid:
+                                index_combine = tid
+                        if index_combine == -1:
+                            logger.error("can't matching index_combine")
+                            exit()
+                        try:
+                            emotion_index = map_emotion_to_index(emotion)
+                            combine_list.append({'emotion_index': emotion_index, 'id':tid, 'cctv_id':meta_data['cctv_id'], 
                                             'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name'],
-                                            'combine_data': combine_data, 'db_insert_file_path':file_name}) #TODO action is not emotion
-                            event_count += 1                        
-
-            else:
-                time.sleep(0.0001)
-        except Exception as e:
-            logger.error(f"Error occured in emotion, {e}")
-            exit()
-            
+                                            'combine_dict': combine_data[index_combine], 'db_insert_file_path':file_name})
+                        except Exception as e:
+                            logger.warning(e)
+                        
+            event_pipe.send({'action': "emotion", "combine_list": combine_list})
+        else:
+            time.sleep(0.0001)

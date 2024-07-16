@@ -16,9 +16,8 @@ from datetime import datetime
 import atexit
 
 from Tracker.BoTSORT.tracker.bot_sort import BoTSORT
-# from EventHandler.EventHandler import EventHandler
+from EventHandler.EventHandler import EventHandler
 from Sensor.sensor import Sensor
-# from Sensor.edge_cam import EdgeCam, Radar, Thermal, Camera
 from Utils.logger import get_logger
 from Utils.head_bbox import *
 from Utils.pipeline import *
@@ -32,10 +31,8 @@ from HAR.MHNCITY.violence.violence import Violence
 from variable import get_root_args, get_sort_args, get_scale_args, get_debug_args, get_rader_args, get_thermal_args
 from rtmo import get_model
 
-from DB.db_controller import connect_db, insert_event, insert_realtime
-from DB.mq_controller import connect_mq
+from DB.db_controller import connect_db
 from DB.event_controller import collect_evnet
-from DB.snapshot_controller import object_snapshot_control
 
 def main():
     # 출력 로그 설정
@@ -66,18 +63,6 @@ def main():
     # 이벤트 프로세스
     event_process = Process(target=collect_evnet, args=(event_output_pipe,))
     event_process.start()
-
-
-    # 센서 데이터 + 감정 = 실시간 객체 정보 수집을 위한 파이프라인 생성
-    # realtime_sensor_input_pipe, realtime_sensor_output_pipe = Pipe()
-    # 센서 데이터 + 감정 = 실시간 객체 정보 수집을 위한 프로세스
-    # realtime_sensor_process = Process(target=collect_realtime, args=(realtime_sensor_output_pipe,))
-    # realtime_sensor_process.start()
-
-    # matched_data = (emotion_data['cctv_id'], emotion_data['id'], radar_data[1], radar_data[2], thermal['temp'], emotion_data['mapped_emotion_results'][0], radar_data[3])
-    # realtime_queue.put(matched_data)
-    # insert_realtime_thread = Thread(target=insert_realtime, args=(realtime_status_queue, realtime_status_conn),daemon=False).start()
-    
       
     process_list = []
     if 'selfharm' in args.modules:

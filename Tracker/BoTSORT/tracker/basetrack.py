@@ -36,17 +36,20 @@ class BaseTrack(object):
 
     @staticmethod
     # 아래가 원본 
+    def next_id():
+        BaseTrack._count += 1
+        if BaseTrack._count > BaseTrack._max_count:
+            BaseTrack._count = BaseTrack._count % BaseTrack._max_count
+        return BaseTrack._count
     # def next_id():
+    #     if BaseTrack._available_ids:
+    #         return BaseTrack._available_ids.pop()  # 재사용 가능한 ID가 있으면 반환
+    #     if BaseTrack._count >= BaseTrack._max_count:
+    #         print(BaseTrack._count)
+    #         print("basetrack.py : 최대 객체 수를 초과했습니다. 일단 넘어감.")
+    #         return BaseTrack._count
     #     BaseTrack._count += 1
     #     return BaseTrack._count
-    def next_id():
-        if BaseTrack._available_ids:
-            return BaseTrack._available_ids.pop()  # 재사용 가능한 ID가 있으면 반환
-        if BaseTrack._count >= BaseTrack._max_count:
-            print("basetrack.py : 최대 객체 수를 초과했습니다. 일단 넘어감.")
-            return BaseTrack._count
-        BaseTrack._count += 1
-        return BaseTrack._count
 
     @staticmethod
     def release_id(track_id):

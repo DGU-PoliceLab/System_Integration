@@ -18,7 +18,7 @@ def get_arg(category = None, arg= None):
 
 def get_root_args():
     parser = ArgumentParser()
-    parser.add_argument('--modules', type=list, default=['selfharm', 'falldown', 'emotion'],help='running modules')
+    parser.add_argument('--modules', type=list, default=['selfharm', 'falldown', 'emotion', 'violence'],help='running modules')
     parser.add_argument('--test', type=str, default='test',help='test')
     parser.add_argument('--nas_path', type=str, default= "/System_Integration/Output/NAS", help='NAS path'),
     parser.add_argument('--img-size', type=int, default=1080, help='inference size (pixels)')
@@ -110,7 +110,7 @@ def get_falldown_args():
     parser = ArgumentParser(description="Falldown")
     parser.add_argument('--threshhold', type=float, default=0.6, help='falldown threshhold')
     parser.add_argument('--frame_step', type=int, default=14, help='inference frame step')
-    parser.add_argument('--longterm_status', type=bool, default=False, help='longterm status on/off')
+    parser.add_argument('--longterm_status', type=bool, default=True, help='longterm status on/off')
     args = parser.parse_args()
     return args
 
@@ -121,7 +121,7 @@ def get_selfharm_args():
     parser.add_argument('--label-map', default='HAR/PLASS/models/labelmap.txt', help='label map file')
     parser.add_argument('--device', type=str, default='cuda:0', help='CPU/CUDA device option')
     parser.add_argument('--step-size', type=int, default=10, help='inference step size')
-    parser.add_argument('--thread_mode', type=bool, default=False, help='use inference thread')
+    parser.add_argument('--thread_mode', type=bool, default=True, help='use inference thread')
     args = parser.parse_args()
     return args
 

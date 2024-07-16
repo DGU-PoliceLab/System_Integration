@@ -19,8 +19,25 @@ def preprocess(skeletons, frame_step):
 
     return np.array(skeletons)
 
+MAX_LEN = 10
+N = 3
+THRESHOLD = 0.4
+event_deque = deque(maxlen=10)
 def check_event(action_name='Normal', confidence=0, threshold=0.6):
-    if action_name == 'Fall Down' and threshold < confidence:
+    
+    if action_name == 'Fall Down' and THRESHOLD < confidence:
+        event_deque.append('Fall Down')
+    else:
+        event_deque.append('Normal')
+
+    fall_conter = 0
+    for evt in event_deque:
+        if evt == "Fall Down":
+            fall_conter += 1
+    # print(event_deque)
+
+    if N <= fall_conter:
+        event_deque.clear()
         return True
     return False   
 
@@ -39,50 +56,46 @@ def Falldown(data_pipe, event_pipe):
     data_pipe.send(True)
     
     while True:
-        try:
-            action_name = 'None'
-            confidence = 0
-            data = data_pipe.recv()
-            if data:
-                if data == "end_flag":
-                    logger.warning("Falldown process end.")
-                    if args.longterm_status:
-                        longterm_input_pipe.send("end_flag")
-                    if debug_args.visualize:    
-                        visualizer.merge_img_to_video()
-                    break
-                tracks, meta_data = data
+        action_name = 'None'
+        confidence = 0
+        data = data_pipe.recv()
+        if data:
+            if data == "end_flag":
+                logger.warning("Falldown process end.")
                 if args.longterm_status:
-                    longterm_input_tracks = deepcopy(tracks)
-                    longterm_input_data = [longterm_input_tracks, meta_data]
-                for i, track in enumerate(tracks):
-                    skeletons = track.skeletons
-                    if len(skeletons) < args.frame_step:
-                        continue
+                    longterm_input_pipe.send("end_flag")
+                if debug_args.visualize:    
+                    visualizer.merge_img_to_video()
+                break
+            tracks, meta_data = data
+            if args.longterm_status:
+                longterm_input_tracks = deepcopy(tracks)
+                longterm_input_data = [longterm_input_tracks, meta_data]
+            for i, track in enumerate(tracks):
+                skeletons = track.skeletons
+                if len(skeletons) < args.frame_step:
+                    continue
 
-                    tid = track.track_id
-                    skeletons = preprocess(skeletons=skeletons, frame_step=args.frame_step)
+                tid = track.track_id
+                skeletons = preprocess(skeletons=skeletons, frame_step=args.frame_step)
 
-                    out = action_model.predict(skeletons, meta_data['frame_size'])
-                    action_name = action_model.class_names[out[0].argmax()]
-                    confidence = out[0][1]
-                
-                if check_event(action_name=action_name, confidence=confidence, threshold=args.threshhold):
-                    logger.info("action: falldown")
-                    event_pipe.send({'action': "falldown", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name'],
-                                    'combine_data': None})
+                out = action_model.predict(skeletons, meta_data['frame_size'])
+                action_name = action_model.class_names[out[0].argmax()]
+                confidence = out[0][1]
+            
+            if check_event(action_name=action_name, confidence=confidence, threshold=args.threshhold):
+                logger.info("action: falldown")
+                event_pipe.send({'action': "falldown", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name'], 'combine_data': None})
 
-
-                    if args.longterm_status:
-                        longterm_input_pipe.send(longterm_input_data)
-
-                if debug_args.visualize:
-                    if init_flag == True:
-                        visualizer.mkdir(meta_data['timestamp'])
-                        init_flag = False
-                    visualizer.save_temp_image([meta_data["v_frame"], action_name, confidence], meta_data["num_frame"])
+                if args.longterm_status:
+                    longterm_input_pipe.send(longterm_input_data)
             else:
-                time.sleep(0.0001)
-        except Exception as e:
-            logger.error(f"Error occured in falldown, {e}")
-            exit()
+                action_name = 'Normal' #TODO 임시. 그려지는 루틴이 분리가 안되서 임시 처리
+
+            if debug_args.visualize:
+                if init_flag == True:
+                    visualizer.mkdir(meta_data['timestamp'])
+                    init_flag = False
+                visualizer.save_temp_image([meta_data["v_frame"], action_name, confidence], meta_data["num_frame"])
+        else:
+            time.sleep(0.0001)
