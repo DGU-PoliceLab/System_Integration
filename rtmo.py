@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, "/workspace/policelab-git/System_Integration/PoseEstimation/")
+sys.path.insert(0, "/System_Integration/PoseEstimation/")
 from argparse import ArgumentParser
 from typing import Dict
 import cv2

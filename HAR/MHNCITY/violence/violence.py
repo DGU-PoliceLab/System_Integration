@@ -1,6 +1,6 @@
 import argparse
 import sys
-sys.path.insert(0, '/workspace/policelab-git/System_Integration/HAR/MHNCITY/violence')
+sys.path.insert(0, '/System_Integration/HAR/MHNCITY/violence')
 from model import TemporalDynamicGCN, evaluate_frames
 import numpy as np
 import time

@@ -1,6 +1,6 @@
 import sys
 import time
-sys.path.insert(0, '/workspace/policelab-git/System_Integration/HAR/HRI')
+sys.path.insert(0, '/System_Integration/HAR/HRI')
 import torch
 from torchvision import transforms
 from facial_emotion import MTNet, get_model_path
@@ -50,6 +50,9 @@ def Emotion(data_pipe, event_pipe):
             data = data_pipe.recv()
             if data:
                 if data == "end_flag":
+                    logger.warning("Emotion process end.")
+                    if debug_args.visualize:    
+                        visualizer.merge_img_to_video()
                     break
                 tracks, meta_data, face_detections, frame, combine_data = data
                 num_frame = meta_data['num_frame']
@@ -95,7 +98,7 @@ def Emotion(data_pipe, event_pipe):
                             ############
                             cctv_id = meta_data['cctv_id']
                             file_name = f"{cctv_id}/{meta_data['timestamp']}_{tid}.jpg"
-                            cv2.imwrite(f"/workspace/policelab-git/System_Integration/Output/NAS/{file_name}", face_img) #TODO TEMP
+                            cv2.imwrite(f"/System_Integration/Output/NAS/{file_name}", face_img) #TODO TEMP
                             ######
                             
                             ### TODO need image id correct 
@@ -107,10 +110,9 @@ def Emotion(data_pipe, event_pipe):
                                             'combine_data': combine_data, 'db_insert_file_path':file_name}) #TODO action is not emotion
                             event_count += 1                        
 
-                            # [{'tid': 2, 'temperature': 34.01934283088236, 'breath': 30, 'heart': None}]
             else:
                 time.sleep(0.0001)
-        finally:
-            logger.warning("Emotion process end.")
-            if debug_args.visualize:    
-                visualizer.merge_img_to_video()
+        except Exception as e:
+            logger.error(f"Error occured in emotion, {e}")
+            exit()
+            

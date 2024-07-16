@@ -18,9 +18,9 @@ def get_arg(category = None, arg= None):
 
 def get_root_args():
     parser = ArgumentParser()
-    parser.add_argument('--modules', type=list, default=["selfharm", "falldown", "emotion", "longterm", "violence"],help='running modules')
+    parser.add_argument('--modules', type=list, default=['selfharm', 'falldown', 'emotion'],help='running modules')
     parser.add_argument('--test', type=str, default='test',help='test')
-    parser.add_argument('--nas_path', type=str, default= "/workspace/policelab-git/System_Integration/Output/NAS", help='NAS path'),
+    parser.add_argument('--nas_path', type=str, default= "/System_Integration/Output/NAS", help='NAS path'),
     parser.add_argument('--img-size', type=int, default=1080, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.7, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.3, help='IOU threshold for NMS')
@@ -68,14 +68,14 @@ def get_debug_args():
     parser = ArgumentParser("DEBUG")
     parser.add_argument("--debug", type=bool, default=True)
     parser.add_argument("--visualize", type=bool, default=False)
-    parser.add_argument("--source", type=str, default="rtsp://admin:admin@172.30.1.30/stream1")
+    parser.add_argument("--source", type=str, default="rtsp://admin:wonwoo0!23@172.30.1.42/stream1")
     parser.add_argument("--output", type=str, default="_Output")
     parser.add_argument("--cctv_id", type=int, default=-1)
-    parser.add_argument("--cctv_ip", type=str, default="rtsp://admin:admin@172.30.1.30/stream1")
+    parser.add_argument("--cctv_ip", type=str, default="rtsp://admin:wonwoo0!23@172.30.1.42/stream1")
     parser.add_argument("--cctv_name", type=int, default=-1)
-    parser.add_argument("--thermal_ip", type=str, default="172.30.1.40")
+    parser.add_argument("--thermal_ip", type=str, default="172.30.1.21")
     parser.add_argument("--thermal_port", type=int, default=10603)
-    parser.add_argument("--rader_ip", type=str, default="172.30.1.50")
+    parser.add_argument("--rader_ip", type=str, default="172.30.1.51")
     parser.add_argument("--rader_port", type=int, default=5000)
     parser.add_argument("--rader_data", type=str, default="Input/data/rader_data.json")
     args = parser.parse_args()
@@ -100,9 +100,9 @@ def get_thermal_args():
 def get_scale_args():
     parser = ArgumentParser("SCALE")
     parser.add_argument("--selfharm", type=int, default=4)
-    parser.add_argument("--falldown", type=int, default=2)
+    parser.add_argument("--falldown", type=int, default=1)
     parser.add_argument("--emotion", type=int, default=1)
-    parser.add_argument("--violence", type=int, default=2)
+    parser.add_argument("--violence", type=int, default=1)
     args = parser.parse_args()
     return args
 
@@ -110,7 +110,7 @@ def get_falldown_args():
     parser = ArgumentParser(description="Falldown")
     parser.add_argument('--threshhold', type=float, default=0.6, help='falldown threshhold')
     parser.add_argument('--frame_step', type=int, default=14, help='inference frame step')
-    parser.add_argument('--longterm_status', type=bool, default=True, help='longterm status on/off')
+    parser.add_argument('--longterm_status', type=bool, default=False, help='longterm status on/off')
     args = parser.parse_args()
     return args
 

@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, '/workspace/policelab-git/System_Integration/HAR/PLASS')
+sys.path.insert(0, '/System_Integration/HAR/PLASS')
 import time
 import numpy as np
 import mmengine
@@ -90,6 +90,9 @@ def Selfharm(data_pipe, event_pipe):
             data = data_pipe.recv()
             if data and data != prev_data:
                 if data == "end_flag":
+                    logger.warning("Selfharm process end.")
+                    if debug_args.visualize:    
+                        visualizer.merge_img_to_video()
                     break
                 tracks, meta_data = data
                 prev_data = data
@@ -102,7 +105,6 @@ def Selfharm(data_pipe, event_pipe):
                     visualizer.save_temp_image([meta_data["v_frame"], EVENT[0], EVENT[1]], meta_data["num_frame"])
             else:
                 time.sleep(0.0001)
-    finally:
-        logger.warning("Selfharm process end.")
-        if debug_args.visualize:    
-            visualizer.merge_img_to_video()
+    except Exception as e:
+        logger.error(f"Error occured in selfharm, {e}")
+        exit()

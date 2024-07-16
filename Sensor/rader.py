@@ -97,7 +97,7 @@ class Rader():
                 matching_keys = self.manage_keys(track_keys, vital_keys)
                 
                 for key in matching_keys:
-                    self.logger.info(f"Matching Data: {track_info[key]}, {self.vital_info[key]}")
+                    self.logger.debug(f"Matching Data: {track_info[key]}, {self.vital_info[key]}")
                     result.append({'id': key, 'pos': (track_info[key]['pos_x'],track_info[key]['pos_y']), 'breath': self.vital_info[key]['vital_breath'], 'heart': self.vital_info[key]['vital_heart']})
             return result
 

@@ -1,11 +1,10 @@
 import sys
-sys.path.insert(0, "/workspace/policelab-git/System_Integration/")
-sys.path.insert(0, "/workspace/policelab-git/System_Integration/PoseEstimation/mmlab")
-sys.path.insert(0, "/workspace/policelab-git/System_Integration/Tracker")
-sys.path.insert(0, "/workspace/policelab-git/System_Integration/HAR")
-sys.path.insert(0, "/workspace/policelab-git/System_Integration/MOT")
+sys.path.insert(0, "/System_Integration/")
+sys.path.insert(0, "/System_Integration/PoseEstimation/mmlab")
+sys.path.insert(0, "/System_Integration/Tracker")
+sys.path.insert(0, "/System_Integration/HAR")
+sys.path.insert(0, "/System_Integration/MOT")
 import os
-import signal
 import copy
 from multiprocessing import Process, Pipe
 import cv2
@@ -209,8 +208,7 @@ def main():
             wait_subprocess_ready("Violence", violence_pipe_list[i][0], logger)
 
     # 종료 함수
-    def shut_down(sig=None, frame=None):
-        logger.warning("Terminated by user input.")
+    def shut_down():
         if 'selfharm' in args.modules:
             for p in selfharm_pipe_list:
                 p[0].send("end_flag")
@@ -224,10 +222,8 @@ def main():
             for p in violence_pipe_list:
                 p[0].send("end_flag")
         event_process.kill()
-        os._exit()
 
-    # atexit.register(shut_down)
-    signal.signal(signal.SIGINT, shut_down)
+    atexit.register(shut_down)
     
     # 사람 감지 및 추적
     while cap.isOpened():

@@ -18,7 +18,7 @@ def config_logger(logger, console:bool, file:bool, name:str):
 
     if file == True:
         now = datetime.now()
-        file_handler = logging.FileHandler(os.path.join("/workspace/policelab-git/System_Integration/Output/log", f'{name} {now}.log'))
+        file_handler = logging.FileHandler(os.path.join("/System_Integration/Output/log", f'{name} {now}.log'))
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
     return logger

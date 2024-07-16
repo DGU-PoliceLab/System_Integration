@@ -19,7 +19,7 @@ class MTNet(nn.Module):
         super().__init__()
         curr_dict = os.getcwd()
         cache_dir = os.path.join(curr_dict, 'Models')
-        fpath='/workspace/policelab-git/System_Integration/HAR/HRI/models/enet_b2_7.pt'
+        fpath='/System_Integration/HAR/HRI/models/enet_b2_7.pt'
         self.base_net = torch.load(fpath)
         self.in_dim = self.base_net.classifier.in_features
         self.base_net.classifier = nn.Identity()

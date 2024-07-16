@@ -1,5 +1,5 @@
 # Make Log Dir
-mkdir ./_Output
+mkdir ./Output
 mkdir ./Output/log
 mkdir ./Output/NAS
 mkdir ./MOT/face_detection/checkpoints

@@ -50,7 +50,7 @@ param_scheduler = [
 
 # data
 input_size = (640, 640)
-metafile = '/workspace/policelab-git/System_Integration/PoseEstimation/mmlab/configs/_base_/datasets/coco.py'
+metafile = '/System_Integration/PoseEstimation/mmlab/configs/_base_/datasets/coco.py'
 codec = dict(type='YOLOXPoseAnnotationProcessor', input_size=input_size)
 
 train_pipeline_stage1 = [

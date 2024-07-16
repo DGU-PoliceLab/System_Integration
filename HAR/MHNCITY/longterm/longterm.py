@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, '/workspace/policelab-git/System_Integration/HAR/MHNCITY/longterm')
+sys.path.insert(0, '/System_Integration/HAR/MHNCITY/longterm')
 import numpy as np
 import time
 from Utils.logger import get_logger

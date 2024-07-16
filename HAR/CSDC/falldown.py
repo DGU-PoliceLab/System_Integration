@@ -45,6 +45,11 @@ def Falldown(data_pipe, event_pipe):
             data = data_pipe.recv()
             if data:
                 if data == "end_flag":
+                    logger.warning("Falldown process end.")
+                    if args.longterm_status:
+                        longterm_input_pipe.send("end_flag")
+                    if debug_args.visualize:    
+                        visualizer.merge_img_to_video()
                     break
                 tracks, meta_data = data
                 if args.longterm_status:
@@ -78,9 +83,6 @@ def Falldown(data_pipe, event_pipe):
                     visualizer.save_temp_image([meta_data["v_frame"], action_name, confidence], meta_data["num_frame"])
             else:
                 time.sleep(0.0001)
-        finally:
-            logger.warning("Falldown process end.")
-                if args.longterm_status:
-                    longterm_input_pipe.send("end_flag")
-                if debug_args.visualize:    
-                    visualizer.merge_img_to_video()
+        except Exception as e:
+            logger.error(f"Error occured in falldown, {e}")
+            exit()
