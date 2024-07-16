@@ -53,12 +53,12 @@ def inference(model, label_map, pose_data, meta_data, pipe, logger):
         action_label = label_map[max_pred_index]
         confidence = result.pred_score[max_pred_index]
         logger.debug(f"action: {action_label}")
-        if action_label != 'normal' and confidence > 0.85:
-            print("selfharm", confidence)
+        if (action_label != 'normal' and confidence > 0.85) or (action_label == 'normal' and confidence < 0.3):
+            logger.debug("selfharm", confidence)
+            logger.debug(result.pred_score)
             logger.info(f"selfharm detected! {meta_data[-1]['current_datetime']}")
             pipe.send({'action': "selfharm", 'id':tid, 'cctv_id':meta_data[-1]['cctv_id'], 'current_datetime':meta_data[-1]['current_datetime'], 'location':meta_data[-1]['cctv_name'], 'combine_data': None})
-        else:
-            print("normal", confidence)
+
         EVENT = [action_label, confidence]
     except Exception as e:
         logger.error(f'Error occured in inference_thread, error: {e}')

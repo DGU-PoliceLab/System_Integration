@@ -191,6 +191,7 @@ def insert_event(event_queue, conn, mq_conn):
 
     while True:
         event = event_queue.get()
+        print(event)
         if event is not None:
             event_type = event['action']
             if event_type == "emotion":                                    
@@ -267,6 +268,7 @@ def insert_event(event_queue, conn, mq_conn):
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """
                         values = [cctv_id, event_type, event_location, people_table_id, event_date, event_time, event_clip_directory, event_start, event_end]
+                        print(values)
                         cur.execute(DB_insert_sql, values)
                         LOGGER.info("Event insertion complete.")
 

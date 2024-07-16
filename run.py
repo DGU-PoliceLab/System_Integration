@@ -35,7 +35,7 @@ from DB.event_controller import collect_evnet
 
 def main():
     # 출력 로그 설정
-    logger = get_logger(name= '[RUN]', console= False, file= False)
+    logger = get_logger(name= '[RUN]', console= True, file= False)
     # 루트 인자 및 기타 인자 설정
     args = get_root_args()
     dict_args = vars(args)
