@@ -79,6 +79,9 @@ def Violence(data_pipe, event_pipe):
                     break
                 tracks, meta_data = data
                 frame_skeletons = []
+                # dev hyunsu
+                bboxes = []
+                skls = []
                 current_frame_count += 1
                 num_detected_people = len(tracks)
                 for i, track in enumerate(tracks):
@@ -86,11 +89,29 @@ def Violence(data_pipe, event_pipe):
                     if len(skeletons) < args.window_size:
                         continue
                     tid = track.track_id
+                    x1, y1, x2, y2 = track.tlbr
+                    bboxes.append([x1, y1, x2, y2])
+                    skls.append(skeletons)
                     for i in range(len(skeletons)):
                         temp = skeletons[i]
                         temp = temp[:, :2]
-                        frame_skeletons.append(temp)
-                    
+                        frame_skeletons.append(temp)        
+                bboxes.sort(key = lambda x:x[2]-x[0])
+                b_point = 0
+                s_point = 0 
+                for idx in range(len(bboxes)-1):
+                    p = 0
+                    if bboxes[idx][2] > bboxes[idx+1][0]:
+                        p += abs(bboxes[idx][2] - bboxes[idx+1][0])
+                    b_point += p / abs(bboxes[idx+1][2] - bboxes[idx][0])
+                for skl in skls:
+                    p = 0
+                    for idx in range(len(skl)-1):
+                        p += np.linalg.norm(skl[idx] - skl[idx+1])
+                    p /= len(skl)
+                    s_point += p
+                s_point /= 1000
+
                 for _ in range(args.num_persons - num_detected_people):
                     frame_skeletons.append(np.zeros((args.num_keypoints, 2)))
                 else:
@@ -110,25 +131,30 @@ def Violence(data_pipe, event_pipe):
                     max_score_1, mean_score_1  = evaluate_frames(fight_model_1, all_batch_keypoints)
                     max_score_2, mean_score_2 = evaluate_frames(fight_model_2, all_batch_keypoints)
                     
-                    mean_avg_score = adjust_mean(mean_score_1, mean_score_2)
-                    logger.debug(f"mean_avg_score : {mean_avg_score}")           
-                    logger.info(f"mean_avg_score : {mean_avg_score}")         
-                    logger.info(f"mean_score_1 : {mean_score_1}") 
-                    logger.info(f"mean_score_2 : {mean_score_2}") 
-                    if mean_score_2 < 0.52:
+                    # mean_avg_score = adjust_mean(mean_score_1, mean_score_2)
+                    max_avg_score = adjust_max(max_score_1, max_score_2)
+                    max_avg_score_weight = max_avg_score + b_point + s_point
+                    # logger.debug(f"mean_avg_score : {mean_avg_score}")           
+                    logger.info(f"max_avg_score : {max_avg_score}")         
+                    # logger.info(f"mean_score_1 : {mean_score_1}") 
+                    # logger.info(f"mean_score_2 : {mean_score_2}")
+                    logger.info(f"max_score_1 : {max_score_1}")
+                    logger.info(f"max_score_2 : {max_score_2}")
+                    logger.info(f"max_avg_score_weight : {max_avg_score_weight}")
+                    if abs(max_avg_score_weight) > 1:
                         print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
                         print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
                         print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
                         print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
                         print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
-                    else:
-                        print("________________________________________________________")
-                        print("________________________________________________________")
-                        print("________________________________________________________")
-                        print("________________________________________________________")
-                        print("________________________________________________________")
-                        print("________________________________________________________")
-                    if check_violence(confidence=mean_avg_score, threshhold=args.threshhold):
+                    # else:
+                    #     print("________________________________________________________")
+                    #     print("________________________________________________________")
+                    #     print("________________________________________________________")
+                    #     print("________________________________________________________")
+                    #     print("________________________________________________________")
+                    #     print("________________________________________________________")
+                    if check_violence(confidence=max_avg_score, threshhold=args.threshhold):
                         tid = 1
                         logger.info("action: violence")
                         event_pipe.send({'action': "violence", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name'],

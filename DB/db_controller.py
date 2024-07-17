@@ -158,6 +158,7 @@ def delete_snapshot(tid,conn, mq_conn):
 
 def insert_event(event_queue, conn, mq_conn):
     assert conn is not None, 'conn object does not exist'
+    assert mq_conn is not None, 'mq_conn object does not exist'
     """
     이상행동 타입(심박수: heartrate, 체온: temperature, 감정: emotion, 장시간고정자세: longterm_status, 폭행: violence, 쓰러짐: falldown, 자해: selfharm)	
     event_detection_people : people table -> people_id

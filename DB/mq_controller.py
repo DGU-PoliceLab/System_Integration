@@ -26,3 +26,23 @@ def publish_message(message, channel):
 
     except Exception as e:
         LOGGER.warning(f'FUNCTION publish_message : Error occurred during message publishing, error: {e}')
+
+# def test():
+#     mq_config = {
+#     "host": '172.30.1.40',
+#     "port": 9090,
+#     "user": 'mhncity',
+#     "password": 'mhncity@364',
+#     "exchange": 'event_exchange'
+#     }
+#     credentials = pika.PlainCredentials(username=mq_config['user'], password=mq_config['password'])
+#     # connection_params = pika.ConnectionParameters(host=CONFIG['host'], credentials=CONFIG['credentials']) # 현수님 버전 (에러)
+#     connection_params = pika.ConnectionParameters(host=mq_config['host'], credentials=credentials)
+#     connection = pika.BlockingConnection(connection_params)
+#     channel = connection.channel()
+#     message = {"alert_type": "event", "event_id": 30006}
+#     channel.basic_publish(exchange=mq_config['exchange'], body=json.dumps(message), routing_key='')
+
+
+# if __name__ == "__main__":
+#     test()
