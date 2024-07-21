@@ -1,7 +1,7 @@
 import time
 import numpy as np
 from collections import deque
-from CSDC.ActionsEstLoader import TSSTG
+from HAR.CSDC.module.Loader import TSSTG
 from Utils.logger import get_logger
 from Utils._visualize import Visualizer
 from variable import get_falldown_args, get_debug_args

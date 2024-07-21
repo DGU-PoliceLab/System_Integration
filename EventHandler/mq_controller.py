@@ -1,7 +1,7 @@
 import os
 import pika
 import json
-from DB.config import mq_config as CONFIG
+from EventHandler.config import mq_config as CONFIG
 from Utils.logger import get_logger
 
 LOGGER = get_logger(name = '[MQ]', console=True, file=False)

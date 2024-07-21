@@ -30,8 +30,15 @@ from HAR.MHNCITY.violence.violence import Violence
 from variable import get_root_args, get_sort_args, get_scale_args, get_debug_args, get_rader_args, get_thermal_args
 from rtmo import get_model
 
-from DB.db_controller import connect_db
-from DB.event_controller import collect_evnet
+from EventHandler.db_controller import connect_db
+from EventHandler.event_controller import collect_evnet
+
+##TODO
+# variable 프리셋 만들기
+# args 싱글톤
+# 자해 모듈 트레커 사용하도록
+# 낙상/쓰러짐 모듈 tid
+# 트레커 reid 기능
 
 def main():
     # 출력 로그 설정
@@ -48,10 +55,10 @@ def main():
     scale_args = get_scale_args()
 
     def check_args():
-        # if debug_args.debug == False:
-        #     logger.info("Unsupported arguments")
-        #     logger.info("debug_args.debug == False")
-        #     exit()
+        if debug_args.debug == False:
+            logger.info("Unsupported arguments")
+            logger.info("debug_args.debug == False")
+            exit()
         pass
     check_args()
 
@@ -104,7 +111,6 @@ def main():
             process_list.append(violence_process)
             violence_process.start()
 
-    # 디버그 모드
     if debug_args.debug == True:
         source = debug_args.source
         cctv_info = dict()

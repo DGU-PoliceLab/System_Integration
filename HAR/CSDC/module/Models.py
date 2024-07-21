@@ -5,8 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-from CSDC.Actionsrecognition.Utils import Graph
-
+from CSDC.module.Utils import Graph
 
 class GraphConvolution(nn.Module):
     """The basic module for applying a graph convolution.

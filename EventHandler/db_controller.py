@@ -2,8 +2,8 @@ import pymysql
 import random
 import queue as QueueModule
 import time
-from DB.config import db_config as CONFIG
-from DB.mq_controller import publish_message
+from EventHandler.config import db_config as CONFIG
+from EventHandler.mq_controller import publish_message
 from Utils.logger import get_logger
 from variable import get_arg
 from copy import deepcopy

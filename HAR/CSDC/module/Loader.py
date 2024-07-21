@@ -2,9 +2,8 @@ import os
 import torch
 import numpy as np
 
-from CSDC.Actionsrecognition.Models import TwoStreamSpatialTemporalGraph
-from CSDC.pose_utils import normalize_points_with_size, scale_pose
-
+from CSDC.module.Models import TwoStreamSpatialTemporalGraph
+from CSDC.module.Utils import normalize_points_with_size, scale_pose
 
 class TSSTG(object):
     """Two-Stream Spatial Temporal Graph Model Loader.
@@ -13,7 +12,7 @@ class TSSTG(object):
         device: (str) Device to load the model on 'cpu' or 'cuda'.
     """
     def __init__(self,
-                 weight_file='/System_Integration/HAR/CSDC/models/tsstg-model-best-1.pth',
+                 weight_file='/System_Integration/HAR/CSDC/weight/tsstg-model-best-1.pth',
                  device='cuda'):
         self.graph_args = {'strategy': 'spatial'}
         self.class_names = ['Normal', 'Fall Down']
