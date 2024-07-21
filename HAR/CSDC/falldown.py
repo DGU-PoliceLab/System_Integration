@@ -45,7 +45,7 @@ FPS = 30
 hold_frames = [[] for x in range(MAX_PERSON)]
 count = [0 for x in range(MAX_PERSON)]
 LONGTERM_THRESHOLD = 1500.0
-HOLD_TIME = 3
+HOLD_TIME = 10
 
 def check_longterm(tracks, meta_data):
     event = ['normal', 1.0]
@@ -129,7 +129,7 @@ def Falldown(data_pipe, event_pipe):
 
             # TODO 영상에서 낙상이 있으면 작동되게 구현되어 있음. 롱텀 제대로 구현하려면 낙상 이벤트가 id별로 관리되야함.
             if check_event(action_name=action_name, confidence=confidence, threshold=args.threshhold):
-                event_pipe.send({'action': "longterm_status", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name'], 'combine_data': None})
+                event_pipe.send({'action': "falldown", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name'], 'combine_data': None})
                 logger.info(f"action: falldown, {confidence}  {meta_data['num_frame']}")
 
                 is_longterm_check = True

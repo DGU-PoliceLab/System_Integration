@@ -35,7 +35,7 @@ from DB.event_controller import collect_evnet
 
 def main():
     # 출력 로그 설정
-    logger = get_logger(name= '[RUN]', console= True, file= False)
+    logger = get_logger(name= '[RUN]', console= False, file= False)
     # 루트 인자 및 기타 인자 설정
     args = get_root_args()
     dict_args = vars(args)
@@ -252,8 +252,9 @@ def main():
                 tid = track.track_id
                 v_frame = draw_bbox_skeleton.draw(v_frame, tid, detection, skeletons[-1])
             meta_data['v_frame'] = v_frame
- 
-            if num_frame % fps == 0:
+
+            emotion_interval = fps * 5
+            if num_frame % emotion_interval == 0:
                 combine_data, thermal_data, rader_data, overlay_image = sensor.get_data(frame, tracks, face_detections)
                 logger.info(combine_data)
                            
@@ -262,7 +263,7 @@ def main():
                 selfharm_pipe_list[num_frame % scale_args.selfharm][0].send([tracks, meta_data])
             if 'falldown' in args.modules and 0 < scale_args.falldown:
                 falldown_pipe_list[num_frame % scale_args.falldown][0].send([tracks, meta_data])
-            if num_frame % fps == 0:
+            if num_frame % emotion_interval == 0:
                 if 'emotion' in args.modules and 0 < scale_args.emotion:
                     emotion_pipe_list[num_frame % scale_args.emotion][0].send([tracks, meta_data, face_detections, frame, combine_data])
             if 'violence' in args.modules and 0 < scale_args.violence:

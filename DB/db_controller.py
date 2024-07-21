@@ -176,8 +176,7 @@ def insert_event(event_queue, conn, mq_conn):
     def check(event, cur_time):
         last_time = LAST_EVENT_TIME[event]
         if last_time == None:
-            update(event, cur_time)
-            return False
+            return True
         else:
             diff = cur_time - last_time
             if diff > DELAY_TIME:
@@ -243,7 +242,7 @@ def insert_event(event_queue, conn, mq_conn):
                 LOGGER.info(f"[EVENT DETECT] - cctv_id : {cctv_id}, event_type : {event_type}, event_location : {event_location}, track_id : {track_id}, event_date : {event_date}, event_time : {event_time}, event_clip_directory : {event_clip_directory}, event_start : {event_start}, event_end : {event_end}")
                 event_cur_time = str_to_second(event_time) # event insert delay code use here
                 if check(event_type, event_cur_time): # event insert delay code use here
-                    print("check 성공") # 이 부분이 출력되면 DB에 전송한다는 의미
+                    
                     try:
                         cur = conn.cursor()
                         # sql_bring_people_id = """

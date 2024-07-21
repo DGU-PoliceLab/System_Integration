@@ -25,6 +25,7 @@ def check_violence(confidence, threshhold):
         return True
     return False   
 
+
 def adjust_max(max_score_1, max_score_2):
     score_gap = abs(max_score_1 - max_score_2)
     score_1 = max_score_1 * 0.6 if max_score_1 > 0.7 and score_gap > 0.4 else max_score_1
@@ -110,7 +111,7 @@ def Violence(data_pipe, event_pipe):
                         p += np.linalg.norm(skl[idx] - skl[idx+1])
                     p /= len(skl)
                     s_point += p
-                s_point /= 1000
+                s_point = s_point / 1000 / len(skls)
 
                 for _ in range(args.num_persons - num_detected_people):
                     frame_skeletons.append(np.zeros((args.num_keypoints, 2)))
@@ -141,19 +142,6 @@ def Violence(data_pipe, event_pipe):
                     logger.info(f"max_score_1 : {max_score_1}")
                     logger.info(f"max_score_2 : {max_score_2}")
                     logger.info(f"max_avg_score_weight : {max_avg_score_weight}")
-                    if abs(max_avg_score_weight) > 1:
-                        print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
-                        print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
-                        print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
-                        print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
-                        print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
-                    # else:
-                    #     print("________________________________________________________")
-                    #     print("________________________________________________________")
-                    #     print("________________________________________________________")
-                    #     print("________________________________________________________")
-                    #     print("________________________________________________________")
-                    #     print("________________________________________________________")
                     if check_violence(confidence=max_avg_score, threshhold=args.threshhold):
                         tid = 1
                         logger.info("action: violence")
