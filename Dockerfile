@@ -28,6 +28,8 @@ RUN pip install opencv-python scipy numpy==1.23.0 tqdm natsort openpyxl matplotl
 RUN pip install -U scikit-learn
 # Install python library (MHNcity)
 RUN pip install torch_geometric
+RUN pip install onnx
+RUN pip install onnxruntime
 # Install python library (PLASS)
 RUN pip install fvcore einops
 # Install python library (HRI) 

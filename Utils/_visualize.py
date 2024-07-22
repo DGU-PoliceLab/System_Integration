@@ -45,7 +45,7 @@ class Visualizer():
             height, width, layers = img.shape
             size = (width,height)
             
-            out = cv2.VideoWriter(os.path.join(self.output, self.timestamp, f"{self.action}.mp4"), cv2.VideoWriter_fourcc('M','P','4','V'), 30, size)
+            out = cv2.VideoWriter(os.path.join(self.output, self.timestamp, f"{self.action}.mp4"), cv2.VideoWriter_fourcc('m','p','4','v'), 30, size)
             for path in paths:
                 frame = cv2.imread(path)
                 out.write(frame)

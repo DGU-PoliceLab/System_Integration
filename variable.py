@@ -18,8 +18,8 @@ def get_arg(category = None, arg= None):
 
 def get_root_args():
     parser = ArgumentParser()
-    parser.add_argument('--modules', type=list, default=['falldown'],help='running modules')
-    # parser.add_argument('--modules', type=list, default=['violence', 'emotion'],help='running modules')
+    parser.add_argument('--modules', type=list, default=['violence'],help='running modules')
+    # parser.add_argument('--modules', type=list, default=['violence', 'emotion', 'falldown', 'selfharm'],help='running modules')
     parser.add_argument('--test', type=str, default='test',help='test')
     parser.add_argument('--nas_path', type=str, default= "/System_Integration/Output/NAS", help='NAS path'),
     parser.add_argument('--img-size', type=int, default=1080, help='inference size (pixels)')
