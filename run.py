@@ -16,7 +16,7 @@ from datetime import datetime
 import atexit
 
 from Tracker.BoTSORT.tracker.bot_sort import BoTSORT
-from Sensor.sensor import Sensor
+from Sensor import EdgeCam
 from Utils.logger import get_logger
 from Utils.head_bbox import *
 from Utils.pipeline import *
@@ -28,10 +28,9 @@ from HAR.CSDC.falldown import Falldown
 from HAR.HRI.emotion import Emotion
 from HAR.MHNCITY.violence.violence import Violence
 from variable import get_root_args, get_sort_args, get_scale_args, get_debug_args, get_rader_args, get_thermal_args
-from rtmo import get_model
+import PoseEstimation.mmlab.rtmo as rtmo
+from EventHandler import EventHandler
 
-from EventHandler.db_controller import connect_db
-from EventHandler.event_controller import collect_evnet
 
 ##TODO
 # variable 프리셋 만들기
@@ -64,12 +63,15 @@ def main():
 
     torch.multiprocessing.set_start_method('spawn') # See "https://tutorials.pytorch.kr/intermediate/dist_tuto.html"
     
+    evnt_handler = EventHandler.EventHandler()
+        
     # 이벤트 처리를 위한 수집을 위한 파이프라인 생성
     event_input_pipe, event_output_pipe = Pipe()
+    
     # 이벤트 프로세스
-    event_process = Process(target=collect_evnet, args=(event_output_pipe, debug_args.debug))
+    event_process = Process(target=evnt_handler.update, args=(event_output_pipe, debug_args.debug))
     event_process.start()
-      
+    
     process_list = []
     if 'selfharm' in args.modules:
         selfharm_pipe_list = []
@@ -110,45 +112,19 @@ def main():
             violence_process = Process(target=Violence, args=(violence_pipe_list[i][1], event_input_pipe,), name=f"Violence_Process_{i}")
             process_list.append(violence_process)
             violence_process.start()
+    
+    cctv_info = EdgeCam.get_cctv_info()
+    cctv_source = EdgeCam.get_cctv_source()
 
-    if debug_args.debug == True:
-        source = debug_args.source
-        cctv_info = dict()
-        cctv_info['cctv_id'] = debug_args.cctv_id
-        cctv_info['ip'] = debug_args.cctv_ip
-        cctv_info['cctv_name'] = debug_args.cctv_name
-        thermal_info = dict()
-        thermal_info['ip'] = debug_args.thermal_ip
-        thermal_info['port'] = debug_args.thermal_port
-        rader_data = None
-        with open(debug_args.rader_data, 'r') as f:
-            rader_data = json.load(f)
-        pass
-    else:
-        try:
-            conn = connect_db("mysql-pls")
-            if conn.open:
-                if dict_args['video_file'] != "":
-                    cctv_info = get_cctv_info(conn)
-                    print(f"cctv_info : {cctv_info}")
-                    cctv_info = cctv_info[1]
-                    source = cctv_info['cctv_ip']
-            else:
-                logger.warning('RUN-CCTV Database connection is not open.')
-                cctv_info = {'cctv_id': 404}
-        except Exception as e:
-            logger.warning(f'Unable to connect to database, error: {e}')
-            cctv_info = {'cctv_id': 404}
-
-    # 사람 감지 및 추적을 위한 모델 로드
-    inferencer, init_args, call_args, display_alias = get_model()
+    # 자세 추정 모델
+    inferencer, init_args, call_args, display_alias = rtmo.get_model()
     # 얼굴 감지 모델 로드
     face_detector = face_detection.build_detector('RetinaNetResNet50', confidence_threshold=.5, nms_iou_threshold=.3)
 
     # 동영상 관련 설정
     now = datetime.now()
     timestamp = str(now).replace(" ", "").replace(":", "-").replace(".", "-")
-    cap = cv2.VideoCapture(source)
+    cap = cv2.VideoCapture(cctv_source)
     fourcc = cv2.VideoWriter_fourcc('m','p','4','v')
     fps = 30
     num_frame = 0
@@ -159,7 +135,7 @@ def main():
     tracker = BoTSORT(bot_sort_args, fps)
 
     # 센서 관련 설정
-    sensor = Sensor(debug_args.thermal_ip, debug_args.thermal_port, debug_args.rader_ip, debug_args.rader_port)
+    sensor = EdgeCam(debug_args.thermal_ip, debug_args.thermal_port, debug_args.rader_ip, debug_args.rader_port)
 
     if debug_args.debug == False: #TODO TEMP 해당 로직은 클래스 내부로 정리되어야함
         # 열화상 센서 연결
@@ -186,7 +162,6 @@ def main():
                 break
             else:
                 time.sleep(0.1)
-
     if 'selfharm' in args.modules:
         for i in range(scale_args.selfharm):
             wait_subprocess_ready("Selfharm", selfharm_pipe_list[i][0], logger)
@@ -232,24 +207,20 @@ def main():
                 pred = _['predictions'][0]
                 l_p = len(pred)
                 logger.info(f'frame #{num_frame} pose_results- {l_p} person detect!')
-
                 pred.sort(key = lambda x: x['bbox'][0][0])
 
                 for p in pred:
                     keypoints = p['keypoints']
                     keypoints_scores = p['keypoint_scores']
-                    detection = [*p['bbox'][0], p['bbox_score']]  # TODO box score 계산 방식을 스켈레톤 포인트 중 제일 낮은 socre를 사용하도록 고치기  
-                    
+                    detection = [*p['bbox'][0], p['bbox_score']]  # TODO box score 계산 방식을 스켈레톤 포인트 중 제일 낮은 socre를 사용하도록 고치기                  
                     # 스켈레톤 포인트에 음수가 있는 경우 제외 TODO 탐지 결과 동일한지 확인 필요
                     conditions = [(x < 0 or y < 0) for x, y in keypoints]
                     from itertools import compress
                     invalid_skeletons = list(compress(keypoints, conditions))
                     if invalid_skeletons:
                         continue
-                    #
                     detections.append(detection)
                     skeletons.append([a + [b] for a, b in zip(keypoints, keypoints_scores)])
-            
             detections = np.array(detections, dtype=np.float32)
             skeletons = np.array(skeletons, dtype=np.float32)
             tracks = tracker.update(detections, skeletons, frame)
@@ -268,7 +239,7 @@ def main():
             meta_data['v_frame'] = v_frame
 
             combine_data = None # TODO 더미 데이터 넣을 것
-            emotion_interval = fps * 5  # 따로 파라미터로 빼던가 해야함  TODO
+            emotion_interval = fps * 3  # 따로 파라미터로 빼던가 해야함  TODO
             if debug_args.debug == False:  # 디버그에서도 지원하도록 해야함 TODO
                 if num_frame % emotion_interval == 0:
                     combine_data, thermal_data, rader_data, overlay_image = sensor.get_data(frame, tracks, face_detections)

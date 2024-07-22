@@ -42,17 +42,6 @@ def adjust_mean(mean_score_1, mean_score_2):
     mean_avg_score = (score_1 + score_2) / 2
     return mean_avg_score
 
-# def temp_preprocess(skeletons, window_size):
-#     skeletons = deque(skeletons, maxlen=window_size)
-
-#     for i, sk in enumerate(skeletons):
-#         if i == WINDOW_SIZE:
-#             break
-#         indices_14 = [0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]        
-#         skeletons[i] = sk[indices_14]
-
-#     return np.array(skeletons)
-
 def pad_keypoints(keypoints, num_persons, num_keypoints):
     # Pad with zeros if less than 'num_persons'
     if keypoints.shape[0] < num_persons:
@@ -60,7 +49,6 @@ def pad_keypoints(keypoints, num_persons, num_keypoints):
         #print ('padding', padding)
         keypoints = np.pad(keypoints, padding, mode='constant')
     return keypoints[:num_persons, :num_keypoints, :2]  # Select first 'num_persons' and 'num_keypoints'
-
 
 def Violence(data_pipe, event_pipe):
     logger = get_logger(name="[MhnCity.Violence]", console=True, file=False)
@@ -72,13 +60,10 @@ def Violence(data_pipe, event_pipe):
     ort_session_270 = onnxruntime.InferenceSession("/System_Integration/HAR/MHNCITY/violence/models/model_gcn270.onnx")
     ort_session_397 = onnxruntime.InferenceSession("/System_Integration/HAR/MHNCITY/violence/models/model_gcn397.onnx")
     # print(ort_session_270.get_inputs()[0].name)
-
     # print(ort_session.get_inputs())
     ort_270_inputs = ort_session_270.get_inputs()[0].name
     ort_270_outputs = ort_session_270.get_outputs()[0].name
-
     # print(ort_session_397.get_inputs()[0].name)
-
     # print(ort_session.get_inputs())
     ort_397_inputs = ort_session_397.get_inputs()[0].name
     ort_397_outputs = ort_session_397.get_outputs()[0].name
@@ -86,10 +71,7 @@ def Violence(data_pipe, event_pipe):
     all_batch_keypoints = []
     current_batch_keypoints = []
     current_frame_count = 0
-    loop_count = 0
     data_pipe.send(True)
-
-
 
     from Utils._visualize import Visualizer
     if debug_args.visualize:
@@ -97,11 +79,8 @@ def Violence(data_pipe, event_pipe):
             init_flag = True
 
     while True:
-        loop_count += 1
-
-
-
-        # print(f"loop count {loop_count}")
+        # import time
+        # start = time.time()
         data = data_pipe.recv()
         if data:
             if data == "end_flag":
@@ -114,10 +93,8 @@ def Violence(data_pipe, event_pipe):
             current_frame_count += 1
             num_detected_people = len(tracks)
 
-
             action_name = 'normal' #TODO 2번 정의함
             confidence = 0          #TODO 2번 정의함
-
             if num_detected_people:
                 for i, track in enumerate(tracks):
                     skeletons = track.skeletons[-1]
@@ -139,8 +116,7 @@ def Violence(data_pipe, event_pipe):
             padded_keypoints = pad_keypoints(frame_skeletons, args.num_persons, args.num_keypoints)  # args.num_persons, args.num_keypoints로 수정
             current_batch_keypoints.append(padded_keypoints)
             if current_frame_count == args.num_frames:  
-                all_batch_keypoints.append(current_batch_keypoints)
-                
+                all_batch_keypoints.append(current_batch_keypoints)             
                 
                 current_batch_keypoints = []
                 current_frame_count = 0
@@ -173,22 +149,23 @@ def Violence(data_pipe, event_pipe):
                 # mean_avg_score = adjust_mean(max_score_1, max_score_2)
                 # logger.info(f"mean_avg_score : {max_score_2}")
 
-                action_name = 'normal'
                 confidence = max_score_2
                 if check_violence(confidence=max_score_2, threshhold=args.threshhold):
                     action_name = 'violence'
                     tid = 1
                     logger.info(f"action: violence {meta_data['num_frame']}")
                     event_pipe.send({'action': "violence", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name']})
-                                
                 all_batch_keypoints = []
 
             if debug_args.visualize:
                 if init_flag == True:
                     visualizer.mkdir(meta_data['timestamp'])
                     init_flag = False
-                visualizer.save_temp_image([meta_data["v_frame"], action_name, confidence], meta_data["num_frame"])
-
+                if action_name == 'violence':
+                    visualizer.save_temp_image([meta_data["v_frame"], action_name, confidence], meta_data["num_frame"], color="red")
+                else:
+                    visualizer.save_temp_image([meta_data["v_frame"], action_name, confidence], meta_data["num_frame"])
+            # logger.info(f"time : {round(time.time() - start, 6)}")
         else:
             time.sleep(0.0001)
             

@@ -20,14 +20,14 @@ class Visualizer():
             self.timestamp = timestamp
             os.mkdir(self.path)
 
-    def save_temp_image(self, data, frame_no = -1):
+    def save_temp_image(self, data, frame_no = -1, color="default"):
         if frame_no == -1:
             frame_no = self.frame_no
             self.frame_no += 1
         if data:
             draw_frame, action, score = data
             if action != None or score != None:
-                image = draw(draw_frame, action, score)
+                image = draw(draw_frame, action, score, color=color)
             else:
                 image = draw_frame
             cv2.imwrite(os.path.join(self.path, f"{frame_no}.png"), image)
