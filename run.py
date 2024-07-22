@@ -16,7 +16,7 @@ from datetime import datetime
 import atexit
 
 from Tracker.BoTSORT.tracker.bot_sort import BoTSORT
-from Sensor import EdgeCam
+from Sensor.EdgeCam import EdgeCam
 from Utils.logger import get_logger
 from Utils.head_bbox import *
 from Utils.pipeline import *
@@ -33,6 +33,12 @@ from EventHandler import EventHandler
 
 
 ##TODO
+# sensor 관련은 EdgeCam class을 통해서 사용하도록
+# EventHandler로 일단 내용 정리(내부적으론 DB와 MQ 둘다 사용)
+# 각 탐지 모듈 코드 최적화
+# 시간적 성능 측정 방법 
+
+#
 # variable 프리셋 만들기
 # args 싱글톤
 # 자해 모듈 트레커 사용하도록
@@ -63,7 +69,7 @@ def main():
 
     torch.multiprocessing.set_start_method('spawn') # See "https://tutorials.pytorch.kr/intermediate/dist_tuto.html"
     
-    evnt_handler = EventHandler.EventHandler()
+    evnt_handler = EventHandler.EventHandler(is_debug=debug_args.debug)
         
     # 이벤트 처리를 위한 수집을 위한 파이프라인 생성
     event_input_pipe, event_output_pipe = Pipe()
@@ -113,14 +119,16 @@ def main():
             process_list.append(violence_process)
             violence_process.start()
     
-    cctv_info = EdgeCam.get_cctv_info()
-    cctv_source = EdgeCam.get_cctv_source()
-
     # 자세 추정 모델
     inferencer, init_args, call_args, display_alias = rtmo.get_model()
     # 얼굴 감지 모델 로드
     face_detector = face_detection.build_detector('RetinaNetResNet50', confidence_threshold=.5, nms_iou_threshold=.3)
 
+    # 센서 관련 설정
+    sensor = EdgeCam(debug_args.thermal_ip, debug_args.thermal_port, debug_args.rader_ip, debug_args.rader_port, debug_args=debug_args)
+    cctv_info = sensor.get_cctv_info()
+    cctv_source = cctv_info['source']
+    
     # 동영상 관련 설정
     now = datetime.now()
     timestamp = str(now).replace(" ", "").replace(":", "-").replace(".", "-")
@@ -133,9 +141,6 @@ def main():
         w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
     tracker = BoTSORT(bot_sort_args, fps)
-
-    # 센서 관련 설정
-    sensor = EdgeCam(debug_args.thermal_ip, debug_args.thermal_port, debug_args.rader_ip, debug_args.rader_port)
 
     if debug_args.debug == False: #TODO TEMP 해당 로직은 클래스 내부로 정리되어야함
         # 열화상 센서 연결

@@ -7,11 +7,11 @@ class CCTV:
         self.logger = get_logger(name= '[THERMAL]', console= True, file= False)
 
         if debug_args.debug == True:
-            self.source = debug_args.source
             self.cctv_info = dict()
             self.cctv_info['cctv_id'] = debug_args.cctv_id
             self.cctv_info['ip'] = debug_args.cctv_ip
             self.cctv_info['cctv_name'] = debug_args.cctv_name
+            self.cctv_info['source'] = debug_args.source
         else:
             import config
             conn = self.connect_db(config.db_config)

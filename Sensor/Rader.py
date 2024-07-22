@@ -4,7 +4,7 @@ from Utils.logger import get_logger
 
 class Rader():
 
-    def __init__(self, ip, port):
+    def __init__(self, ip, port, debug_args):
         self.ip = ip
         self.port = port
         self.sock = None

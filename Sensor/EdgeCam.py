@@ -9,18 +9,26 @@ from Utils.logger import get_logger
 import time
 import pymysql
 import config
-from Sensor import Rader, Thermal
+from Sensor import Rader, Thermal, CCTV
+from Sensor import Rader, Thermal, CCTV
 
 class EdgeCam:
     def __init__(self, thermal_ip, thermal_port, rader_ip, rader_port, debug_args):
+        self.logger = get_logger(name= '[EdgeCam]', console= True, file= False)
+
         self.thermal_ip = thermal_ip
         self.thermal_port = thermal_port
         self.rader_ip = rader_ip
         self.rader_port = rader_port
-        self.thermal = Thermal(self.thermal_ip, self.thermal_port)
-        self.rader = Rader(self.rader_ip, self.rader_port)
-        self.logger = get_logger(name= '[EdgeCam]', console= True, file= False)
+        
+        self.thermal = Thermal.Thermal(self.thermal_ip, self.thermal_port, debug_args)
+        self.rader = Rader.Rader(self.rader_ip, self.rader_port, debug_args)
+        self.cctv = CCTV.CCTV(debug_args)
+
         self.data = {}
+
+    def get_cctv_info(self):
+        return self.cctv.get_cctv_info()
 
     def connect_rader(self):
         self.rader.connect()
