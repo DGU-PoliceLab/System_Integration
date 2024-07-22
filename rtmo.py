@@ -232,7 +232,7 @@ def main(log_opt=[True, True]):
 def rtmo(source, rtmo_queue, log_opt=["RTMO", False, False]):
     logger = get_logger(name = '[RTMO]', console=False, file=False)
     init_args = {'pose2d': 'rtmo', 'pose2d_weights': "PoseEstimation/mmlab/mmpose/checkpoints/rtmo-l_16xb16-600e_body7-640x640-b37118ce_20231211.pth", 'scope': 'mmpose', 'device': None, 'det_model': None, 'det_weights': None, 'det_cat_ids': 0, 'pose3d': None, 'pose3d_weights': None, 'show_progress': False}
-    call_args = {'inputs': source, 'show': False, 'draw_bbox': True, 'draw_heatmap': False, 'bbox_thr': 0.5, 'nms_thr': 0.65, 'pose_based_nms': True, 'kpt_thr': 0.3, 'tracking_thr': 0.3, 'use_oks_tracking': False, 'disable_norm_pose_2d': False, 'disable_rebase_keypoint': False, 'num_instances': 1, 'radius': 3, 'thickness': 1, 'skeleton_style': 'mmpose', 'black_background': False, 'vis_out_dir': '', 'pred_out_dir': '', 'vis-out-dir': '_Output'}
+    call_args = {'inputs': source, 'show': False, 'draw_bbox': True, 'draw_heatmap': False, 'bbox_thr': 0.5, 'nms_thr': 0.65, 'pose_based_nms': True, 'kpt_thr': 0.3, 'tracking_thr': 0.3, 'use_oks_tracking': True, 'disable_norm_pose_2d': False, 'disable_rebase_keypoint': False, 'num_instances': 1, 'radius': 3, 'thickness': 1, 'skeleton_style': 'mmpose', 'black_background': False, 'vis_out_dir': '', 'pred_out_dir': '', 'vis-out-dir': '_Output'}
     inferencer = MMPoseInferencer(**init_args)
     cur_frame = 0
     cap = cv2.VideoCapture(call_args['inputs'])
