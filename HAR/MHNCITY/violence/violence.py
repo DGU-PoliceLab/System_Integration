@@ -71,13 +71,13 @@ def Violence(data_pipe, event_pipe):
     seq=0
     ort_session_270 = onnxruntime.InferenceSession("/System_Integration/HAR/MHNCITY/violence/models/model_gcn270.onnx")
     ort_session_397 = onnxruntime.InferenceSession("/System_Integration/HAR/MHNCITY/violence/models/model_gcn397.onnx")
-    print(ort_session_270.get_inputs()[0].name)
+    # print(ort_session_270.get_inputs()[0].name)
 
     # print(ort_session.get_inputs())
     ort_270_inputs = ort_session_270.get_inputs()[0].name
     ort_270_outputs = ort_session_270.get_outputs()[0].name
 
-    print(ort_session_397.get_inputs()[0].name)
+    # print(ort_session_397.get_inputs()[0].name)
 
     # print(ort_session.get_inputs())
     ort_397_inputs = ort_session_397.get_inputs()[0].name
@@ -106,6 +106,8 @@ def Violence(data_pipe, event_pipe):
         if data:
             if data == "end_flag":
                 logger.warning("Violence process end.")
+                if debug_args.visualize:    
+                    visualizer.merge_img_to_video()
                 break
             tracks, meta_data = data
             frame_skeletons = []
@@ -150,36 +152,34 @@ def Violence(data_pipe, event_pipe):
 
                 all_batch_keypoints = np.array(all_batch_keypoints, dtype=np.float32)
                 ort_270outs = ort_session_270.run([ort_270_outputs], {ort_270_inputs : all_batch_keypoints})
-                print("---------------------------------------------")
-                print(f"현재 seqence : {seq}")
+                # print("---------------------------------------------")
+                # print(f"현재 seqence : {seq}")
                 # print(f"seqence {seq} --- 270 out MAX")
                 # print(f"ort_270outs : {ort_270outs}")
                 # print(f"270 : {round(np.max(ort_270outs), 9)}")
                 
                 ort_397outs = ort_session_397.run([ort_397_outputs], {ort_397_inputs : all_batch_keypoints})
                 # print("397 out")
-                print(f"ort_397outs : {ort_397outs}")
+                # print(f"ort_397outs : {ort_397outs}")
                 # print(f"seqence {seq} --- 397 out MAX")
                 # print(f"397 : {round(np.max(ort_397outs), 9)}")
 
-                print("---------------------------------------------")
+                # print("---------------------------------------------")
                 # 여기가 폭행 모델의 전처리된 최종 input 값이 들어가는 곳 (all_batch_keypoints)
                 max_score_1 = np.max(ort_270outs)
                 max_score_2 = np.max(ort_397outs) # 이 값을 사용해야 됨.
                 mean_score_1 = np.mean(ort_270outs)
                 mean_score_2 = np.mean(ort_397outs)
                 # mean_avg_score = adjust_mean(max_score_1, max_score_2)
-                logger.debug(f"mean_avg_score : {max_score_2}")           
-                logger.info(f"mean_avg_score : {max_score_2}")
+                # logger.info(f"mean_avg_score : {max_score_2}")
 
                 action_name = 'normal'
                 confidence = max_score_2
                 if check_violence(confidence=max_score_2, threshhold=args.threshhold):
                     action_name = 'violence'
                     tid = 1
-                    logger.info("action: violence 발생")
-                    event_pipe.send({'action': "violence", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name'],
-                                 'combine_data': None})
+                    logger.info(f"action: violence {meta_data['num_frame']}")
+                    event_pipe.send({'action': "violence", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name']})
                                 
                 all_batch_keypoints = []
 
