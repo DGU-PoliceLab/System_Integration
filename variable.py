@@ -68,9 +68,9 @@ def get_root_args():
 def get_debug_args():
     parser = ArgumentParser("DEBUG")
     parser.add_argument("--debug", type=bool, default=True)
-    parser.add_argument("--visualize", type=bool, default=False)
-    parser.add_argument("--source", type=str, default="/System_Integration/Input/videos/mhn_demo_1.mp4") #rtsp://admin:wonwoo0!23@172.30.1.42/stream1
-    parser.add_argument("--output", type=str, default="_Output")
+    parser.add_argument("--visualize", type=bool, default=True)
+    parser.add_argument("--source", type=str, default="/System_Integration/Input/videos/Violence_3.mp4") #rtsp://admin:wonwoo0!23@172.30.1.42/stream1
+    parser.add_argument("--output", type=str, default="Output")
     parser.add_argument("--cctv_id", type=int, default=-1)
     parser.add_argument("--cctv_ip", type=str, default="rtsp://admin:wonwoo0!23@172.30.1.42/stream1")
     parser.add_argument("--cctv_name", type=int, default=-1)

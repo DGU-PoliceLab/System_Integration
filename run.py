@@ -238,7 +238,15 @@ def main():
                 for p in pred:
                     keypoints = p['keypoints']
                     keypoints_scores = p['keypoint_scores']
-                    detection = [*p['bbox'][0], p['bbox_score']]
+                    detection = [*p['bbox'][0], p['bbox_score']]  # TODO box score 계산 방식을 스켈레톤 포인트 중 제일 낮은 socre를 사용하도록 고치기  
+                    
+                    # 스켈레톤 포인트에 음수가 있는 경우 제외 TODO 탐지 결과 동일한지 확인 필요
+                    conditions = [(x < 0 or y < 0) for x, y in keypoints]
+                    from itertools import compress
+                    invalid_skeletons = list(compress(keypoints, conditions))
+                    if invalid_skeletons:
+                        continue
+                    #
                     detections.append(detection)
                     skeletons.append([a + [b] for a, b in zip(keypoints, keypoints_scores)])
             
@@ -256,11 +264,6 @@ def main():
                 skeletons = track.skeletons
                 detection = track.tlbr
                 tid = track.track_id
-
-                skeleton = skeletons[-1]
-                for i in range(len(skeleton)):
-                    if skeleton[i][0] < 0 or skeleton[i][1] < 0:
-                        logger.error(f"스켈레톤 이상!  {skeletons[-1]}")
                 v_frame = draw_bbox_skeleton.draw(v_frame, tid, detection, skeletons[-1])
             meta_data['v_frame'] = v_frame
 
