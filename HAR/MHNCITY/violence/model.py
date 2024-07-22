@@ -90,12 +90,14 @@ class TemporalDynamicGCN(nn.Module):
         graph_batches = []
         lstm_input = []
         batch_graphs = []
-
+        #print(f"all_keypoint_batches : {all_keypoint_batches}")
+        
         for keypoint_batch in all_keypoint_batches:
             batch_graphs = []           
             # Convert each tensor in the keypoint_batch to a graph object
             for keypoint_tensor in keypoint_batch:
                 batch_keypoints_tensor = torch.from_numpy(np.array(keypoint_tensor)).float()
+                #print(f"batch_keypoints_tensor : {batch_keypoints_tensor.shape}")
                 edge_index = torch.tensor([[start_node, end_node] for start_node, end_node in skeleton_edges_alphapose], dtype=torch.long).t().contiguous()
                 flattened_tensor = batch_keypoints_tensor.view(-1, 2)
                 graph_data = keypoints_to_graph(flattened_tensor, edge_index)
@@ -105,7 +107,7 @@ class TemporalDynamicGCN(nn.Module):
         
         # move the data to gpu        
         graph_batches_gpu = []
-
+        #print(f"graph_batches : {len(graph_batches)}")
         for batch_graphs in graph_batches:
             batch_graphs_gpu = []
             for data_batch in batch_graphs:
@@ -149,7 +151,7 @@ class TemporalDynamicGCN(nn.Module):
 
         # LSTM layer
         lstm_output, _ = self.lstm(lstm_input_tensor)
-        #print ('lstm_output shape', lstm_output.shape)
+        print ('lstm_output shape', lstm_output.shape)
         # use max pooling instead of mean to capture the most significant features in each dimension across time. 
         
         #lstm_output = lstm_output.mean(dim=1)

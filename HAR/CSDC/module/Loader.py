@@ -12,7 +12,7 @@ class TSSTG(object):
         device: (str) Device to load the model on 'cpu' or 'cuda'.
     """
     def __init__(self,
-                 weight_file='/System_Integration/HAR/CSDC/weight/tsstg-model-best-1.pth',
+                 weight_file='/System_Integration/HAR/CSDC/models/tsstg-model-best-1.pth',
                  device='cuda'):
         self.graph_args = {'strategy': 'spatial'}
         self.class_names = ['Normal', 'Fall Down']

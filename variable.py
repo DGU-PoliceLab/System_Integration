@@ -18,7 +18,7 @@ def get_arg(category = None, arg= None):
 
 def get_root_args():
     parser = ArgumentParser()
-    parser.add_argument('--modules', type=list, default=['selfharm', 'falldown', 'emotion'],help='running modules')
+    parser.add_argument('--modules', type=list, default=['falldown'],help='running modules')
     # parser.add_argument('--modules', type=list, default=['violence', 'emotion'],help='running modules')
     parser.add_argument('--test', type=str, default='test',help='test')
     parser.add_argument('--nas_path', type=str, default= "/System_Integration/Output/NAS", help='NAS path'),
@@ -69,7 +69,7 @@ def get_debug_args():
     parser = ArgumentParser("DEBUG")
     parser.add_argument("--debug", type=bool, default=True)
     parser.add_argument("--visualize", type=bool, default=False)
-    parser.add_argument("--source", type=str, default="rtsp://admin:wonwoo0!23@172.30.1.42/stream1")
+    parser.add_argument("--source", type=str, default="/System_Integration/Input/videos/mhn_demo_1.mp4") #rtsp://admin:wonwoo0!23@172.30.1.42/stream1
     parser.add_argument("--output", type=str, default="_Output")
     parser.add_argument("--cctv_id", type=int, default=-1)
     parser.add_argument("--cctv_ip", type=str, default="rtsp://admin:wonwoo0!23@172.30.1.42/stream1")

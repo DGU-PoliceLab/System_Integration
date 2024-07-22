@@ -67,25 +67,3 @@ class Sensor():
                 self.data[tid]['heart'] = collect['heart']
             result.append(self.data[tid])
         return result, thermal_response, rader_response, overlay_image
-    
-    # def _process(self, pipe):
-    #     self.connect_rader()
-    #     pipe.send(True)
-    #     while True:
-    #         data = pipe.recv()
-    #         if data:
-    #             if data == "end_flag":
-    #                 self.disconnect_rader()
-    #                 self.logger.warning("Sensor process end.")
-    #                 break
-    #             frame, detections = data
-    #             thermal_response, overlay_image = self.thermal.recevice(frame, detections)
-    #             rader_response = self.rader.recevice(frame)
-    #             self.result = thermal_response, rader_response, overlay_image
-    #         else:
-    #             time.sleep(0.0001)
-    
-    # def start_process(self):
-    #     self.process = Process(target=self._process, args=(self.output_pipe,))
-    #     self.process.start()
-    

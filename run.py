@@ -67,7 +67,7 @@ def main():
     # 이벤트 처리를 위한 수집을 위한 파이프라인 생성
     event_input_pipe, event_output_pipe = Pipe()
     # 이벤트 프로세스
-    event_process = Process(target=collect_evnet, args=(event_output_pipe,))
+    event_process = Process(target=collect_evnet, args=(event_output_pipe, debug_args.debug))
     event_process.start()
       
     process_list = []
@@ -140,7 +140,6 @@ def main():
             logger.warning(f'Unable to connect to database, error: {e}')
             cctv_info = {'cctv_id': 404}
 
-    print("")
     # 사람 감지 및 추적을 위한 모델 로드
     inferencer, init_args, call_args, display_alias = get_model()
     # 얼굴 감지 모델 로드
@@ -161,12 +160,14 @@ def main():
 
     # 센서 관련 설정
     sensor = Sensor(debug_args.thermal_ip, debug_args.thermal_port, debug_args.rader_ip, debug_args.rader_port)
-    # 열화상 센서 연결
-    if thermal_args.use_thermal and not thermal_args.use_reconnect:
-        sensor.connect_thermal()
-    # 레이더 센서 연결
-    if rader_args.use_rader:
-        sensor.connect_rader()
+
+    if debug_args.debug == False: #TODO TEMP 해당 로직은 클래스 내부로 정리되어야함
+        # 열화상 센서 연결
+        if thermal_args.use_thermal and not thermal_args.use_reconnect:
+            sensor.connect_thermal()
+        # 레이더 센서 연결
+        if rader_args.use_rader:
+            sensor.connect_rader()
 
     # 디버그(시각화, 동영상 저장) 
     if debug_args.visualize:
@@ -176,6 +177,7 @@ def main():
         filename = os.path.basename(filepath) 
         out = cv2.VideoWriter(os.path.join(output_path, filename + ".mp4"), fourcc, fps, (int(w), int(h)))
 
+    # HAR 모듈 실행 대기
     def wait_subprocess_ready(name, pipe, logger):
         while True:
             logger.info(f'wating for {name} process to ready...')
@@ -185,7 +187,6 @@ def main():
             else:
                 time.sleep(0.1)
 
-    # HAR 모듈 실행 대기
     if 'selfharm' in args.modules:
         for i in range(scale_args.selfharm):
             wait_subprocess_ready("Selfharm", selfharm_pipe_list[i][0], logger)
@@ -214,7 +215,6 @@ def main():
             for p in violence_pipe_list:
                 p[0].send("end_flag")
         event_process.kill()
-
     atexit.register(shut_down)
     
     # 사람 감지 및 추적
@@ -251,18 +251,25 @@ def main():
             meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'fps': int(fps), 'timestamp': timestamp,
                          'cctv_name': cctv_info['cctv_name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} 
 
-            # if debug_args.visualize:
+            # if debug_args.visualize: # TODO 시각화 코드를 따로 빼내야함
             for i, track in enumerate(tracks):
                 skeletons = track.skeletons
                 detection = track.tlbr
                 tid = track.track_id
+
+                skeleton = skeletons[-1]
+                for i in range(len(skeleton)):
+                    if skeleton[i][0] < 0 or skeleton[i][1] < 0:
+                        logger.error(f"스켈레톤 이상!  {skeletons[-1]}")
                 v_frame = draw_bbox_skeleton.draw(v_frame, tid, detection, skeletons[-1])
             meta_data['v_frame'] = v_frame
 
-            emotion_interval = fps * 5
-            if num_frame % emotion_interval == 0:
-                combine_data, thermal_data, rader_data, overlay_image = sensor.get_data(frame, tracks, face_detections)
-                logger.info(combine_data)
+            combine_data = None # TODO 더미 데이터 넣을 것
+            emotion_interval = fps * 5  # 따로 파라미터로 빼던가 해야함  TODO
+            if debug_args.debug == False:  # 디버그에서도 지원하도록 해야함 TODO
+                if num_frame % emotion_interval == 0:
+                    combine_data, thermal_data, rader_data, overlay_image = sensor.get_data(frame, tracks, face_detections)
+                    logger.info(combine_data)
                            
             # 모듈로 데이터 전송
             if 'selfharm' in args.modules and 0 < scale_args.selfharm:
@@ -273,20 +280,19 @@ def main():
                 if 'emotion' in args.modules and 0 < scale_args.emotion:
                     emotion_pipe_list[num_frame % scale_args.emotion][0].send([tracks, meta_data, face_detections, frame, combine_data])
             if 'violence' in args.modules and 0 < scale_args.violence:
-                violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])
-                            
+                violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])                            
             num_frame += 1
         else:
             break
     if debug_args.visualize:
         out.release()
     cap.release()
-    if thermal_args.use_thermal and not thermal_args.use_reconnect:
-        sensor.disconnect_thermal()
-    if rader_args.use_rader:
-        sensor.disconnect_rader()
-    shut_down()
 
+    if debug_args.debug == False:    #TODO 해당 로직은 클래스 내부에 있어야함
+        if thermal_args.use_thermal and not thermal_args.use_reconnect:
+            sensor.disconnect_thermal()
+        if rader_args.use_rader:
+            sensor.disconnect_rader()
     logger.warning("Main process end.")
 
 if __name__ == '__main__':

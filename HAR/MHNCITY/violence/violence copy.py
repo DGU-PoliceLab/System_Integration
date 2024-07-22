@@ -1,12 +1,11 @@
 import argparse
 import sys
-sys.path.insert(0, '/System_Integration/HAR/MHNCITY/violence')
+sys.path.insert(0, '/System_Integration/_HAR/MHNCITY/violence')
 from model import TemporalDynamicGCN, evaluate_frames
 import numpy as np
 import time
 from Utils.logger import get_logger
 from collections import deque
-import pickle
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -42,7 +41,6 @@ def adjust_mean(mean_score_1, mean_score_2):
 
 def temp_preprocess(skeletons, window_size):
     skeletons = deque(skeletons, maxlen=window_size)
-    WINDOW_SIZE = 12
 
     for i, sk in enumerate(skeletons):
         if i == WINDOW_SIZE:
@@ -87,28 +85,23 @@ def Violence(data_pipe, event_pipe):
             print(f"num_detected_people : {num_detected_people}")
             for i, track in enumerate(tracks):
                 skeletons = track.skeletons[-1]
-                print(skeletons)
+                print(f"Current frame count : {current_frame_count}, skeletons : {len(skeletons)}")
                 # if len(skeletons) < args.window_size:
                 #     continue
                 tid = track.track_id
-                skeletons[:, :2]
-                print(skeletons[:, :2])
-                # for i in range(len(skeletons)):
-                #     temp = skeletons[i]
-                #     temp = temp[:, :2]
-                frame_skeletons.append(skeletons[:, :2])
+                for i in range(len(skeletons)):
+                    temp = skeletons[i]
+                    temp = temp[:, :2]
+                    frame_skeletons.append(temp)
                 
             for _ in range(args.num_persons - num_detected_people):
                 frame_skeletons.append(np.zeros((args.num_keypoints, 2)))
-            # else:
-            #     # No person detected, pad with zeros for all
-            #     for _ in range(args.num_persons):
-            #         frame_skeletons.append(np.zeros((args.num_keypoints, 2)))
-            #print(f"Current frame count : {current_frame_count}, skeletons : {len(frame_skeletons)}")
-            
+            else:
+                # No person detected, pad with zeros for all
+                for _ in range(args.num_persons):
+                    frame_skeletons.append(np.zeros((args.num_keypoints, 2)))
+                
             frame_skeletons = np.array(frame_skeletons)
-            #print(frame_skeletons)
-            
             padded_keypoints = pad_keypoints(frame_skeletons, args.num_persons, args.num_keypoints)  # args.num_persons, args.num_keypoints로 수정
             current_batch_keypoints.append(padded_keypoints)
             if current_frame_count == args.num_frames:  
@@ -120,10 +113,6 @@ def Violence(data_pipe, event_pipe):
             if len(all_batch_keypoints) == args.window_size:
                 # all_batch_keypoints_shape = np.array(all_batch_keypoints)
                 # print(f"all_batch_keypoints : {all_batch_keypoints_shape.shape}")
-                
-                with open("violence_data.pickle","wb") as fw:
-                    pickle.dump(all_batch_keypoints, fw)
-                # 여기가 폭행 모델의 전처리된 최종 input 값이 들어가는 곳 (all_batch_keypoints)
                 max_score_1, mean_score_1  = evaluate_frames(fight_model_1, all_batch_keypoints)
                 max_score_2, mean_score_2 = evaluate_frames(fight_model_2, all_batch_keypoints)
                 
@@ -141,5 +130,3 @@ def Violence(data_pipe, event_pipe):
                 all_batch_keypoints = []        
         else:
             time.sleep(0.0001)
-            
-        
