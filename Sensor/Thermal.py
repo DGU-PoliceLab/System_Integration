@@ -8,6 +8,8 @@ from variable import get_thermal_args
 class Thermal():
 
     def __init__(self, ip, port, debug_args):
+        return None #TODO complete it!
+
         self.args = get_thermal_args()
         self.ip = ip
         self.port = port

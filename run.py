@@ -12,7 +12,6 @@ import torch
 import numpy as np
 import time
 import json
-from datetime import datetime
 import atexit
 from Tracker.BoTSORT.tracker.bot_sort import BoTSORT
 from Sensor.EdgeCam import EdgeCam
@@ -29,6 +28,8 @@ from variable import get_root_args, get_sort_args, get_scale_args, get_debug_arg
 import PoseEstimation.mmlab.rtmo as rtmo
 from EventHandler.EventHandler import *
 
+from datetime import datetime
+
 #TODO
 # sensor 관련은 EdgeCam class을 통해서 사용하도록
 # EventHandler로 일단 내용 정리(내부적으론 DB와 MQ 둘다 사용)
@@ -42,14 +43,11 @@ from EventHandler.EventHandler import *
 # 낙상/쓰러짐 모듈 tid
 # 트레커 reid 기능
 
-ENDPOINT = "https://was:40000"
 
 def main():
     # 출력 로그 설정
     logger = get_logger(name= '[RUN]', console= False, file= False)
-    # 루트 인자 및 기타 인자 설정
     args = get_root_args()
-    dict_args = vars(args)
     bot_sort_args = get_sort_args()
     bot_sort_args.ablation = False
     bot_sort_args.mot20 = not bot_sort_args.fuse_score
@@ -58,24 +56,19 @@ def main():
     debug_args = get_debug_args()
     scale_args = get_scale_args()
 
-    # def check_args():
-    #     if debug_args.debug == False:
-    #         logger.info("Unsupported arguments")
-    #         logger.info("debug_args.debug == False")
-    #         exit()
-    #     pass
-    # check_args()
+    def check_args():
+        if debug_args.debug == False:
+            logger.info("Unsupported arguments")
+            logger.info("debug_args.debug == False")
+            exit()
+        pass
+    check_args()
 
     torch.multiprocessing.set_start_method('spawn') # See "https://tutorials.pytorch.kr/intermediate/dist_tuto.html"
     
-    # event_handler = EventHandler(is_debug=debug_args.debug)
-        
-    # 이벤트 처리를 위한 수집을 위한 파이프라인 생성
+    event_handler = EventHandler(args)
     event_input_pipe, event_output_pipe = Pipe()
-    
-
-    # 이벤트 프로세스
-    event_process = Process(target=update, args=(event_output_pipe,))
+    event_process = Process(target=event_handler.update, args=(event_output_pipe,))
     event_process.start()
     
     process_list = []
@@ -125,24 +118,11 @@ def main():
     face_detector = face_detection.build_detector('RetinaNetResNet50', confidence_threshold=.5, nms_iou_threshold=.3)
 
     # 센서 관련 설정
-    # sensor = EdgeCam(debug_args.thermal_ip, debug_args.thermal_port, debug_args.rader_ip, debug_args.rader_port, debug_args=debug_args)
     sensor = EdgeCam(None, None, debug_args.rader_ip, debug_args.rader_port, debug_args=debug_args)
-
-    # cctv_info = sensor.get_cctv_info()
-    # cctv_source = cctv_info['source']
-    url = ENDPOINT + "/cctv/read"
-    cctv_data = requests.post(url, verify=False).json() # , verify=False: 인증서 문제 bypass
-    print(cctv_data)
-    cctv_info = {
-        "cctv_id": cctv_data[0][0],
-        "cctv_name": cctv_data[0][1],
-        "cctv_ip": cctv_data[0][2]
-    }
+    cctv_info = sensor.get_cctv_info()
     cctv_source = cctv_info['cctv_ip']
 
-    
     # 동영상 관련 설정
-    from datetime import datetime
     now = datetime.now()
     timestamp = str(now).replace(" ", "").replace(":", "-").replace(".", "-")
     cap = cv2.VideoCapture(cctv_source)
@@ -154,14 +134,6 @@ def main():
         w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
     tracker = BoTSORT(bot_sort_args, fps)
-
-    if debug_args.debug == False: #TODO TEMP 해당 로직은 클래스 내부로 정리되어야함
-        # 열화상 센서 연결
-        # if thermal_args.use_thermal and not thermal_args.use_reconnect:
-        #     sensor.connect_thermal()
-        # 레이더 센서 연결
-        if rader_args.use_rader:
-            sensor.connect_rader()
 
     # 디버그(시각화, 동영상 저장) 
     if debug_args.visualize:
@@ -279,12 +251,6 @@ def main():
     if debug_args.visualize:
         out.release()
     cap.release()
-
-    if debug_args.debug == False:    #TODO 해당 로직은 클래스 내부에 있어야함
-        # if thermal_args.use_thermal and not thermal_args.use_reconnect:
-        #     sensor.disconnect_thermal()
-        if rader_args.use_rader:
-            sensor.disconnect_rader()
     logger.warning("Main process end.")
 
 if __name__ == '__main__':
