@@ -14,14 +14,12 @@ import time
 import json
 from datetime import datetime
 import atexit
-
 from Tracker.BoTSORT.tracker.bot_sort import BoTSORT
 from Sensor.EdgeCam import EdgeCam
 from Utils.logger import get_logger
 from Utils.head_bbox import *
 from Utils.pipeline import *
 import Utils.draw_bbox_skeleton as draw_bbox_skeleton 
-import Utils.draw_vital as draw_vital
 import MOT.face_detection as face_detection
 from HAR.PLASS.selfharm import Selfharm
 from HAR.CSDC.falldown import Falldown
@@ -31,8 +29,7 @@ from variable import get_root_args, get_sort_args, get_scale_args, get_debug_arg
 import PoseEstimation.mmlab.rtmo as rtmo
 from EventHandler import EventHandler
 
-
-##TODO
+#TODO
 # sensor 관련은 EdgeCam class을 통해서 사용하도록
 # EventHandler로 일단 내용 정리(내부적으론 DB와 MQ 둘다 사용)
 # 각 탐지 모듈 코드 최적화
@@ -181,7 +178,7 @@ def main():
             wait_subprocess_ready("Violence", violence_pipe_list[i][0], logger)
 
     # 종료 함수
-    def shut_down():
+    def shutdown():
         if 'selfharm' in args.modules:
             for p in selfharm_pipe_list:
                 p[0].send("end_flag")
@@ -195,7 +192,7 @@ def main():
             for p in violence_pipe_list:
                 p[0].send("end_flag")
         event_process.kill()
-    atexit.register(shut_down)
+    atexit.register(shutdown)
     
     # 사람 감지 및 추적
     while cap.isOpened():

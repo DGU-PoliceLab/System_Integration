@@ -11,7 +11,6 @@ import pika
 import json
 import datetime
 import copy
-import cv2
 import config
 
 class EventHandler:
@@ -19,13 +18,15 @@ class EventHandler:
         self.mq_logger = get_logger(name= '[MQ]', console= True, file= True)
         self.db_logger = get_logger(name = '[DB]', console=False, file=False)
         self.event_logger = get_logger(name= '[EVENT]', console= True, file= True)
+        
+        self.LAST_EVENT_TIME = {"falldown": None, "selfharm": None, "longterm_status": None, "violence": None}
+        self.DELAY_TIME = get_arg('root', 'event_delay')
 
         if is_debug:
             self.db_conn = self.connect_db()
         else:
             self.db_conn = self.connect_db(config=config.db_config)
 
-        
     def connect_db(self, config=None):
         if config != None:
             conn = pymysql.connect(host=config["host"],
@@ -44,13 +45,12 @@ class EventHandler:
         connection = pika.BlockingConnection(connection_params)
         channel = connection.channel()
         if channel.is_open:
-            print("MQ 연결")
+            pass
         else:
             self.mq_logger.error("Failed to open MQ channel.")
         return channel
 
-    def update(self, pipe, is_debug):
-        
+    def update(self, pipe, is_debug):        
         if is_debug == False:
             import config
             conn = self.connect_db(config.db_config)
@@ -85,9 +85,6 @@ class EventHandler:
 
         except Exception as e:
             self.mq_logger.warning(f'FUNCTION publish_message : Error occurred during message publishing, error: {e}')
-
-    def update(self, event_pipe):
-        pass
     #endregion MQ
 
     #region DB query
@@ -137,110 +134,35 @@ class EventHandler:
                     (people_id, cctv_id, people_name, people_color_num, people_thumbnail_location) 
                     VALUES (%s, %s,%s,%s,%s)
                     """
-                    # print(f"")
-                    # DB에 삽입할 값 설정
                     values = [data[1], data[0], data[2], data[1], data[3]]
                     cur.execute(sql, values)
-                conn.commit()           
-            
-            try:                
-                message = {"alert_type": "people"}            
-                self.publish_message_mq(message, mq_conn)
-            except Exception as e:
-                self.db_logger.warning(f"Error occurred on message queue, error: {e}")
+                conn.commit()                      
+            message = {"alert_type": "people"}            
+            self.publish_message_mq(message, mq_conn)
         except Exception as e:
             self.db_logger.warning(f"Error occurred during insert data into database, error: {e}")
-
-
-
-    def update_snapshot(self, data_list, conn, mq_conn):
-        assert conn is not None, 'FUNCTION update_snapshot : conn object does not exist'
-        assert mq_conn is not None, 'FUNCTION update_snapshot : mq_conn object does not exist'
-        try:
-            # print("update_snapshot 실행")
-            with conn.cursor() as cur:
-                # 외래 키 제약 조건 비활성화
-                # cur.execute("SET FOREIGN_KEY_CHECKS = 0")
-                # Delete existing data
-                delete_sql = "DELETE FROM people WHERE cctv_id = %s"
-                cur.execute(delete_sql, (data_list[0][0],))
-                
-                for data in data_list:
-                    
-                    # Insert new data if data[1] is not None or null
-                    # cctv_id, tid, people_name, db_insert_file_path 순서
-                    if data[1] is not None:
-                        insert_sql = """
-                        INSERT INTO people  
-                        (cctv_id, people_name, people_color_num, people_thumbnail_location) 
-                        VALUES (%s,%s,%s,%s)
-                        """
-                        values = [data[0], data[2], data[1], data[3]]
-                        cur.execute(insert_sql, values)
-
-                # 외래 키 제약 조건 다시 활성화
-                # cur.execute("SET FOREIGN_KEY_CHECKS = 1")
-            conn.commit()
-            
-            try:                
-                message = {"alert_type": "people"}            
-                self.publish_message_mq(message, mq_conn)
-            except Exception as e:
-                self.db_logger.warning(f"FUNCTION update_snapshot : Error occurred on message queue, error: {e}")
-        except Exception as e:
-            self.db_logger.warning(f"FUNCTION update_snapshot : Error occurred during insert data into database, error: {e}")
-
-    def delete_snapshot(self, tid,conn, mq_conn):
-        assert conn is not None, 'FUNCTION delete_snapshot : conn object does not exist'
-        assert mq_conn is not None, 'FUNCTION delete_snapshot : mq_conn object does not exist'
-        try:
-            with conn.cursor() as cursor:
-                sql = "DELETE FROM people WHERE people_color_num = %s"
-                cursor.execute(sql, (tid,))
-            conn.commit()
-            print(f"Deleted object with 객체 ID: {tid} from the database.")
-            self.db_logger.info(f"Object #{tid} detele complete.")
-            try:                
-                message = {"alert_type": "people"}            
-                self.publish_message_mq(message, mq_conn)
-            except Exception as e:
-                self.db_logger.warning(f"FUNCTION delete_snapshot : Error occurred on message queue, error: {e}")
-        except Exception as e:
-            self.db_logger.warning(f"FUNCTION delete_snapshot : Error occurred during delete(OBJECT #tid), error: {e}")
 
     def insert_event(self, event_queue, conn, mq_conn):
         assert conn is not None, 'conn object does not exist'
         assert mq_conn is not None, 'mq_conn object does not exist'
-        """
-        이상행동 타입(심박수: heartrate, 체온: temperature, 감정: emotion, 장시간고정자세: longterm_status, 폭행: violence, 쓰러짐: falldown, 자해: selfharm)	
-        event_detection_people : people table -> people_id
-        """
         
-        # event insert delay code start
-        LAST_EVENT_TIME = {"falldown": None, "selfharm": None, "longterm_status": None, "violence": None}
-        DELAY_TIME = get_arg('root', 'event_delay')
-
         def str_to_second(time_str):
             tl = list(map(int, time_str.split(":")))
             tn = tl[0] * 3600 + tl[1] * 60 + tl[2]
             return tn
 
         def check(event, cur_time):
-            last_time = LAST_EVENT_TIME[event]
+            last_time = self.LAST_EVENT_TIME[event]
             if last_time == None:
                 return True
             else:
                 diff = cur_time - last_time
-                if diff > DELAY_TIME:
+                if diff > self.DELAY_TIME:
                     return True
                 else:
                     return False
 
-        def update(event, cur_time):
-            LAST_EVENT_TIME[event] = cur_time
         # event insert delay code end
-        from datetime import datetime
-
         while True:
             event = event_queue.get()
             print(event)
@@ -264,7 +186,6 @@ class EventHandler:
                         
                         people_name = "Dummy"   #TODO rename
                         people_id = track_id         #TODO rename
-                        people_color_num = track_id  #TODO rename
                         
                         # realtime_datetime = event['current_datetime']
                         realtime_datetime = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
@@ -294,52 +215,33 @@ class EventHandler:
                     self.db_logger.info(f"[EVENT DETECT] - cctv_id : {cctv_id}, event_type : {event_type}, event_location : {event_location}, track_id : {track_id}, event_date : {event_date}, event_time : {event_time}, event_clip_directory : {event_clip_directory}, event_start : {event_start}, event_end : {event_end}")
                     event_cur_time = str_to_second(event_time) # event insert delay code use here
                     if check(event_type, event_cur_time): # event insert delay code use here
-                        
-                        try:
-                            cur = conn.cursor()
-                            # sql_bring_people_id = """
-                            # SELECT people_id 
-                            # FROM people 
-                            # WHERE people_color_num = %s AND cctv_id = %s
-                            # """
-                            sql_bring_people_id = "SELECT people_color_num FROM people WHERE people_color_num = %s AND cctv_id = %s"
-                            # print(f"track_id : {track_id}") 
-                            # print(f"cctv_id : {cctv_id}")
-                            cur.execute(sql_bring_people_id, (track_id, cctv_id))
-                            people_table_id = cur.fetchone()
-                            if people_table_id:
-                                people_table_id = people_table_id[0]
-                            else:
-                                self.db_logger.warn("'[INSERT_EVENT] : people_id' that satisfies the condition does not exist.")
-                                
-                            DB_insert_sql = """
-                            INSERT INTO event 
-                            (cctv_id, event_type, event_location, event_detection_people, 
-                            event_date, event_time, event_clip_directory, 
-                            event_start, event_end) 
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                            """
-                            values = [cctv_id, event_type, event_location, people_table_id, event_date, event_time, event_clip_directory, event_start, event_end]
-                            print(values)
-                            cur.execute(DB_insert_sql, values)
-                            self.db_logger.info("Event insertion complete.")
+                        cur = conn.cursor()
+                        sql_bring_people_id = "SELECT people_color_num FROM people WHERE people_color_num = %s AND cctv_id = %s"
+                        cur.execute(sql_bring_people_id, (track_id, cctv_id))
+                        people_table_id = cur.fetchone()
 
-                            try:
-                                event_id = cur.lastrowid
-                                self.db_logger.info(f"lastrowid로 가져온 event_id : {event_id}")
-                                try:
-                                    message = {"alert_type": "event", "event_id": event_id}
-                                    self.publish_message_mq(message, mq_conn)
-                                except Exception as e:
-                                    self.db_logger.warning(f"Can not find event_id, {e}")
-                                    pass
-                            except Exception as e:
-                                self.db_logger.warning(f"Error occurred in message Queue, error, {e}")
-                        except Exception as e:
-                            self.db_logger.warning(f"Error occurred during event data insertion, error: {e}")
-                        finally:
-                            conn.commit()
-                            update(event_type, event_cur_time) # event insert delay code use here
+                        if people_table_id:
+                            people_table_id = people_table_id[0]
+                        else:
+                            self.db_logger.warn("'[INSERT_EVENT] : people_id' that satisfies the condition does not exist.")
+                            
+                        DB_insert_sql = """
+                        INSERT INTO event 
+                        (cctv_id, event_type, event_location, event_detection_people, 
+                        event_date, event_time, event_clip_directory, 
+                        event_start, event_end) 
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """
+                        values = [cctv_id, event_type, event_location, people_table_id, event_date, event_time, event_clip_directory, event_start, event_end]
+                        cur.execute(DB_insert_sql, values)
+                        self.db_logger.info("Event insertion complete.")
+                        event_id = cur.lastrowid
+                        self.db_logger.info(f"lastrowid로 가져온 event_id : {event_id}")
+                        message = {"alert_type": "event", "event_id": event_id}
+                        self.publish_message_mq(message, mq_conn)
+                        conn.commit()
+
+                        self.LAST_EVENT_TIME[event] = event_cur_time
                 except Exception as e:
                     self.db_logger.warning(f"Error occurred in insert_event loop, error: {e}")
                     pass
