@@ -18,10 +18,16 @@ class EdgeCam:
 
         self.thermal_ip = thermal_ip
         self.thermal_port = thermal_port
+
+        self.thermal = None
+        if thermal_ip == None or thermal_port == None:
+            self.thermal = Thermal.Thermal(self.thermal_ip, self.thermal_port, debug_args)
+        self.thermal = None
+
+        
         self.rader_ip = rader_ip
         self.rader_port = rader_port
         
-        self.thermal = Thermal.Thermal(self.thermal_ip, self.thermal_port, debug_args)
         self.rader = Rader.Rader(self.rader_ip, self.rader_port, debug_args)
         self.cctv = CCTV.CCTV(debug_args)
 
@@ -37,15 +43,24 @@ class EdgeCam:
         self.rader.disconnect()
 
     def connect_thermal(self):
-        self.thermal.connect()
+        if self.thermal != None:
+            self.thermal.connect()
 
     def disconnect_thermal(self):
-        self.thermal.disconnect()
+        if self.thermal != None:
+            self.thermal.disconnect()
 
     def get_data(self, frame, tracks, detections):
-        thermal_response, overlay_image = self.thermal.recevice(frame, detections)
+        thermal_response = []
+        rader_response = []
+        overlay_image = None
+
+        if self.thermal != None:
+            thermal_response, overlay_image = self.thermal.recevice(frame, detections)
+            self.logger.debug(thermal_response)
+
+    
         rader_response = self.rader.recevice(frame)
-        self.logger.debug(thermal_response)
         self.logger.debug(rader_response)
         result = []
         for track in tracks:
@@ -54,29 +69,25 @@ class EdgeCam:
                 self.data[tid] = {'tid': tid, 'temperature': None, 'breath': None, 'heart': None}
             x1, y1, x2, y2 = track.tlbr
             t_temp = []
-            r_temp = []
-            for td in thermal_response:
-                pos = td['pos']
-                if x1 <= pos[0] <= x2 and y1 <= pos[1] <= y2:
-                    td['id'] = tid
-                    td['score'] = abs((x1 + x2) / 2 - pos[0]) + abs((y1 + y2) / 2 - pos[1])
-                    t_temp.append(td)
+            r_temp = []                       
+
             for rd in rader_response:
                 pos = rd['pos']
                 if x1 <= pos[0] <= x2:
                     rd['id'] = tid
                     rd['score'] = abs((x1 + x2) / 2 - pos[0])
                     r_temp.append(rd)
-            t_temp.sort(key= lambda x: x['score'])
             r_temp.sort(key= lambda x: x['score'])
             collect = {'tid': tid, 'temperature': None, 'breath': None, 'heart': None}
-            if len(t_temp) > 0 and tid == t_temp[0]['id']:
-                collect['temperature'] = td['temp']
+
+            # if len(t_temp) > 0 and tid == t_temp[0]['id']:
+            #     collect['temperature'] = td['temp']
+            # if collect['temperature'] != None and collect['temperature'] != 0:
+            #     self.data[tid]['temperature'] = collect['temperature']
+
             if len(r_temp) > 0 and tid == r_temp[0]['id']:
                 collect['breath'] = rd['breath']
-                collect['heart'] = rd['heart']
-            if collect['temperature'] != None and collect['temperature'] != 0:
-                self.data[tid]['temperature'] = collect['temperature']
+                collect['heart'] = rd['heart']               
             if collect['breath'] != None and collect['breath'] != 0:
                 self.data[tid]['breath'] = collect['breath']
             if collect['heart'] != None and collect['heart'] != 0:

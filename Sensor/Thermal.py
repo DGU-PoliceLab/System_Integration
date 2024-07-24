@@ -44,14 +44,15 @@ class Thermal():
                 resolution_x, resolution_y, vcm_temp_sensor, temp_mcu, temp_board)
 
     def recv_raw_data(self):
-        response = b''
-        while len(response) < self.buffer_size:
-            packet = self.sock.recv(self.buffer_size)
-            if not packet:
-                break
-            response += packet
-        self.logger.debug(f"Response from thermal({self.ip}:{self.port}): {response}")
-        return response
+        # response = b''
+        # while len(response) < self.buffer_size:
+        #     packet = self.sock.recv(self.buffer_size)
+        #     if not packet:
+        #         break
+        #     response += packet
+        # self.logger.debug(f"Response from thermal({self.ip}:{self.port}): {response}")
+        # return response
+        return None
     
     def bytes_to_thermal_img(self, byte_data):
         header_size = 58
