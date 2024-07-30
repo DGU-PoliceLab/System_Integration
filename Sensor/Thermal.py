@@ -8,8 +8,6 @@ from variable import get_thermal_args
 class Thermal():
 
     def __init__(self, ip, port, debug_args):
-        return None #TODO complete it!
-
         self.args = get_thermal_args()
         self.ip = ip
         self.port = port
@@ -109,7 +107,7 @@ class Thermal():
         # return temperature
         return temperature, overlay_image
 
-    def recevice(self, frame, detections):
+    def receive(self, frame, detections):
         if self.args.use_reconnect:
             self.connect()
         raw_data = self.recv_raw_data()

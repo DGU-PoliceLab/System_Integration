@@ -154,7 +154,7 @@ def Violence(data_pipe, event_pipe):
                     action_name = 'violence'
                     tid = 1
                     logger.info(f"action: violence {meta_data['num_frame']}")
-                    event_pipe.send({'action': "violence", 'id':tid, 'cctv_id':meta_data['cctv_id'], 'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name']})
+                    event_pipe.send({'action': "violence", 'id':tid, 'meta_data': meta_data})
                 all_batch_keypoints = []
 
             if debug_args.visualize:

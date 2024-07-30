@@ -11,7 +11,7 @@ class CCTV:
             self.cctv_info['cctv_name'] = debug_args.cctv_name
             self.cctv_info['cctv_ip'] = debug_args.source
         else:
-            ENDPOINT = "https://was:40000" # TODO hard coding. 
+            ENDPOINT = "https://localhost:40000" # TODO hard coding. 
             self.cctv_info = self.get_cctv_info(ENDPOINT)
 
     def get_cctv_info(self, end_point):

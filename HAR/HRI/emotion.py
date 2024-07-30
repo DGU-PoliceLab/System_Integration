@@ -3,15 +3,11 @@ import time
 sys.path.insert(0, '/System_Integration/HAR/HRI')
 import torch
 from torchvision import transforms
-from facial_emotion import MTNet, get_model_path
+from facial_emotion import MTNet
 from PIL import Image
-from collections import Counter
 from Utils.logger import get_logger
 from Utils._visualize import Visualizer
 from variable import get_emotion_args, get_debug_args
-from multiprocessing import Process, Pipe
-import cv2
-
 
 def map_emotion_to_index(emotion):
     if emotion == 'NE':
@@ -29,7 +25,6 @@ def Emotion(data_pipe, event_pipe):
     debug_args = get_debug_args()
     if debug_args.visualize:
         visualizer = Visualizer("emotion")
-        init_flag = True
     use_transforms = transforms.Compose(
         [
             transforms.Resize((260,260)),
@@ -55,8 +50,6 @@ def Emotion(data_pipe, event_pipe):
                     visualizer.merge_img_to_video()
                 break
             tracks, meta_data, face_detections, frame, combine_data = data
-            num_frame = meta_data['num_frame']
-            event_count = 0
             cctv_id = str(meta_data['cctv_id'])
 
             import os #TODO TEMP
@@ -106,8 +99,8 @@ def Emotion(data_pipe, event_pipe):
                         
                         cctv_id = meta_data['cctv_id']
 
-                        file_name = f"{meta_data['timestamp']}_{tid}.jpg"
-                        cv2.imwrite(f"{snapshot_path}/{file_name}", face_img) #TODO TEMP
+                        file_name = f"{tid}.jpg"
+                        # cv2.imwrite(f"{snapshot_path}/{file_name}", face_img) #TODO TEMP
                         file_name = f"{cctv_id}/{file_name}"
 
                         combine_result_data = {'tid': tid, 'temperature': None, 'breath': None, 'heart': None}
@@ -117,14 +110,12 @@ def Emotion(data_pipe, event_pipe):
 
                         try:
                             emotion_index = map_emotion_to_index(emotion)
-                            combined_emotion_data = {'emotion_index': emotion_index, 'id':tid, 'cctv_id':meta_data['cctv_id'], 
-                                            'current_datetime':meta_data['current_datetime'], 'location':meta_data['cctv_name'],
-                                            'combine_dict': combine_result_data, 'db_insert_file_path':file_name, 'bbox':[fx1, fy1, fx2, fy2]}
+                            combined_emotion_data = {'emotion_index': emotion_index, 'id':tid, 'bbox':[fx1, fy1, fx2, fy2], 'combine_dict': combine_result_data}
                             logger.debug(f"combined_emotion_data: {combined_emotion_data}")
                             combine_list.append(combined_emotion_data)
                         except Exception as e:
                             logger.warning(e)
             logger.debug(f"combine_list: {combine_list}")
-            event_pipe.send({'action': "emotion", "combine_list": combine_list})
+            event_pipe.send({'action': "emotion", "meta_data": meta_data, "combine_list": combine_list})
         else:
             time.sleep(0.0001)

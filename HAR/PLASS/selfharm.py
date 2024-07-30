@@ -69,7 +69,7 @@ def inference(model, label_map, pose_data, meta_data, pipe, logger):
             logger.debug("selfharm", confidence)
             logger.debug(result.pred_score)
             logger.info(f"selfharm detected! {meta_data[-1]['current_datetime']}")
-            pipe.send({'action': "selfharm", 'id':tid, 'cctv_id':meta_data[-1]['cctv_id'], 'current_datetime':meta_data[-1]['current_datetime'], 'location':meta_data[-1]['cctv_name']})
+            pipe.send({'action': "selfharm", 'id':tid, 'meta_data': meta_data})
 
         EVENT = [action_label, confidence]
     except Exception as e:

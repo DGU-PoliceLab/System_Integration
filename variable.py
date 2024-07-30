@@ -18,8 +18,8 @@ def get_arg(category = None, arg= None):
 
 def get_root_args():
     parser = ArgumentParser()
-    # parser.add_argument('--modules', type=list, default=['violence'],help='running modules')
-    parser.add_argument('--modules', type=list, default=['violence', 'emotion', 'falldown', 'selfharm'],help='running modules')
+    parser.add_argument('--modules', type=list, default=['emotion'],help='running modules')
+    # parser.add_argument('--modules', type=list, default=['violence', 'emotion', 'falldown', 'selfharm'],help='running modules')
     parser.add_argument('--test', type=str, default='test',help='test')
     parser.add_argument('--nas_path', type=str, default= "/System_Integration/Output/NAS", help='NAS path'),
     parser.add_argument('--img-size', type=int, default=1080, help='inference size (pixels)')
@@ -67,8 +67,8 @@ def get_root_args():
 
 def get_debug_args():
     parser = ArgumentParser("DEBUG")
-    parser.add_argument("--debug", type=bool, default=True)
-    parser.add_argument("--visualize", type=bool, default=True)
+    parser.add_argument("--debug", type=bool, default=False)
+    parser.add_argument("--visualize", type=bool, default=False)
     parser.add_argument("--source", type=str, default="/System_Integration/Input/videos/mhn_demo_1.mp4") #rtsp://admin:wonwoo0!23@172.30.1.42/stream1 #mhn_demo_1.mp4, mhn_demo_2.mp4
     parser.add_argument("--output", type=str, default="Output")
     parser.add_argument("--cctv_id", type=int, default=-1)

@@ -1,34 +1,27 @@
-import socket
-from datetime import datetime
-import time
-from variable import get_debug_args
-import numpy as np
-import matplotlib.pyplot as plt
-import cv2
 from Utils.logger import get_logger
-import time
-import pymysql
-from Sensor import Rader, Thermal, CCTV
-from Sensor import Rader, Thermal, CCTV
+from Sensor import rader, thermal, cctv
 
 class EdgeCam:
-    def __init__(self, thermal_ip, thermal_port, rader_ip, rader_port, debug_args):
+    def __init__(self, thermal_ip = None, thermal_port = None, rader_ip = None, rader_port = None, debug_args = None):
         self.logger = get_logger(name= '[EdgeCam]', console= True, file= False)
-        
-        self.thermal = Thermal.Thermal(thermal_ip, thermal_port, debug_args)        
-        self._rader = Rader.Rader(rader_ip, rader_port, debug_args)
-        self._cctv = CCTV.CCTV(debug_args)
-
+        self.logger.info(f"thermal: {thermal_ip}:{thermal_port}, rader: {rader_ip}:{rader_port}")
+        if thermal_ip:
+            self.thermal = thermal.Thermal(thermal_ip, thermal_port, debug_args)  
+        else:
+            self.thermal = None
+        if rader_ip:
+            self.rader = rader.Rader(rader_ip, rader_port, debug_args)
+        else:  
+            self.rader = None
         self.data = {}
 
-    def get_cctv_info(self):
-        return self._cctv.cctv_info
-
     def connect_rader(self):
-        self.rader.connect()
+        if self.rader != None:
+            self.rader.connect()
 
     def disconnect_rader(self):
-        self.rader.disconnect()
+        if self.rader != None:
+            self.rader.disconnect()
 
     def connect_thermal(self):
         if self.thermal != None:
@@ -44,12 +37,11 @@ class EdgeCam:
         overlay_image = None
 
         if self.thermal != None:
-            thermal_response, overlay_image = self.thermal.recevice(frame, detections)
+            thermal_response, overlay_image = self.thermal.receive(frame, detections)
             self.logger.debug(thermal_response)
-
-    
-        rader_response = self.rader.recevice(frame)
-        self.logger.debug(rader_response)
+        if self.rader != None:
+            rader_response = self.rader.receive(frame)
+            self.logger.debug(rader_response)
         result = []
         for track in tracks:
             tid = track.track_id
@@ -71,15 +63,17 @@ class EdgeCam:
             # if len(t_temp) > 0 and tid == t_temp[0]['id']:
             #     collect['temperature'] = td['temp']
             # if collect['temperature'] != None and collect['temperature'] != 0:
-            #     self.data[tid]['temperature'] = collect['temperature']
+            #     self.data[tid]['temperature'] = collect['temperaturWSe']
 
             if len(r_temp) > 0 and tid == r_temp[0]['id']:
                 collect['breath'] = rd['breath']
-                collect['heart'] = rd['heart']               
+                collect['heart'] = rd['heart']                 
             if collect['breath'] != None and collect['breath'] != 0:
                 self.data[tid]['breath'] = collect['breath']
             if collect['heart'] != None and collect['heart'] != 0:
                 self.data[tid]['heart'] = collect['heart']
             result.append(self.data[tid])
+            self.logger.info(f"{result}")
+            
         return result, thermal_response, rader_response, overlay_image
 

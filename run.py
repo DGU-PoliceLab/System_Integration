@@ -11,10 +11,10 @@ import cv2
 import torch
 import numpy as np
 import time
-import json
 import atexit
 from Tracker.BoTSORT.tracker.bot_sort import BoTSORT
-from Sensor.EdgeCam import EdgeCam
+from Sensor.edgecam import EdgeCam
+from Service.was import readActiveCctvList
 from Utils.logger import get_logger
 from Utils.head_bbox import *
 from Utils.pipeline import *
@@ -26,28 +26,15 @@ from HAR.HRI.emotion import Emotion
 from HAR.MHNCITY.violence.violence import Violence
 from variable import get_root_args, get_sort_args, get_scale_args, get_debug_args, get_rader_args, get_thermal_args
 import PoseEstimation.mmlab.rtmo as rtmo
-from EventHandler.EventHandler import *
-
-from datetime import datetime
-
-#TODO
-# sensor 관련은 EdgeCam class을 통해서 사용하도록
-# EventHandler로 일단 내용 정리(내부적으론 DB와 MQ 둘다 사용)
-# 각 탐지 모듈 코드 최적화
-# 시간적 성능 측정 방법 
-
-#
-# variable 프리셋 만들기
-# args 싱글톤
-# 자해 모듈 트레커 사용하도록
-# 낙상/쓰러짐 모듈 tid
-# 트레커 reid 기능
-
+from Event.handler import *
 
 def main():
     # 출력 로그 설정
     logger = get_logger(name= '[RUN]', console= False, file= False)
+
+    # 루트 인자 및 기타 인자 설정
     args = get_root_args()
+    dict_args = vars(args)
     bot_sort_args = get_sort_args()
     bot_sort_args.ablation = False
     bot_sort_args.mot20 = not bot_sort_args.fuse_score
@@ -56,22 +43,17 @@ def main():
     debug_args = get_debug_args()
     scale_args = get_scale_args()
 
-    def check_args():
-        if debug_args.debug == False:
-            logger.info("Unsupported arguments")
-            logger.info("debug_args.debug == False")
-            exit()
-        pass
-    check_args()
-
-    torch.multiprocessing.set_start_method('spawn') # See "https://tutorials.pytorch.kr/intermediate/dist_tuto.html"
-    
-    event_handler = EventHandler(args)
+    torch.multiprocessing.set_start_method('spawn')
+        
+    # 이벤트 처리를 위한 수집을 위한 파이프라인 생성
     event_input_pipe, event_output_pipe = Pipe()
-    event_process = Process(target=event_handler.update, args=(event_output_pipe,))
+    
+    # 이벤트 프로세스
+    event_process = Process(target=update, args=(event_output_pipe,))
     event_process.start()
     
     process_list = []
+    # 자해 모듈 설정
     if 'selfharm' in args.modules:
         selfharm_pipe_list = []
         for _ in range(scale_args.selfharm):
@@ -82,6 +64,7 @@ def main():
             process_list.append(selfharm_process)
             selfharm_process.start()
 
+    # 낙상 모듈 설정
     if 'falldown' in args.modules:
         falldown_pipe_list = []
         for _ in range(scale_args.falldown):
@@ -92,6 +75,7 @@ def main():
             process_list.append(falldown_process)
             falldown_process.start()
 
+    # 감정 모듈 설정
     if 'emotion' in args.modules:
         emotion_pipe_list = []
         for _ in range(scale_args.emotion):
@@ -102,6 +86,7 @@ def main():
             process_list.append(emotion_process)
             emotion_process.start()
 
+    # 폭행 모듈 설정
     if 'violence' in args.modules:
         violence_pipe_list = []
         for _ in range(scale_args.violence):
@@ -117,15 +102,20 @@ def main():
     # 얼굴 감지 모델 로드
     face_detector = face_detection.build_detector('RetinaNetResNet50', confidence_threshold=.5, nms_iou_threshold=.3)
 
+    # CCTV 정보 받아오기
+    cctv_data = readActiveCctvList(debug_args.debug)
+    cctv_info = cctv_data[0]
+    # logger 옵션 상관없이 출력
+    print(f"cctv_info >>> {cctv_info}")
+
     # 센서 관련 설정
-    sensor = EdgeCam(None, None, debug_args.rader_ip, debug_args.rader_port, debug_args=debug_args)
-    cctv_info = sensor.get_cctv_info()
-    cctv_source = cctv_info['cctv_ip']
+    sensor = EdgeCam(cctv_info['thermal_ip'], cctv_info['thermal_port'], cctv_info['rader_ip'], cctv_info['rader_port'], debug_args=debug_args)
 
     # 동영상 관련 설정
+    from datetime import datetime
     now = datetime.now()
     timestamp = str(now).replace(" ", "").replace(":", "-").replace(".", "-")
-    cap = cv2.VideoCapture(cctv_source)
+    cap = cv2.VideoCapture(cctv_info['cctv_ip'])
     fourcc = cv2.VideoWriter_fourcc('m','p','4','v')
     fps = 30
     num_frame = 0
@@ -202,8 +192,7 @@ def main():
                 for p in pred:
                     keypoints = p['keypoints']
                     keypoints_scores = p['keypoint_scores']
-                    detection = [*p['bbox'][0], p['bbox_score']]  # TODO box score 계산 방식을 스켈레톤 포인트 중 제일 낮은 socre를 사용하도록 고치기                  
-                    # 스켈레톤 포인트에 음수가 있는 경우 제외 TODO 탐지 결과 동일한지 확인 필요
+                    detection = [*p['bbox'][0], p['bbox_score']]             
                     conditions = [(x < 0 or y < 0) for x, y in keypoints]
                     from itertools import compress
                     invalid_skeletons = list(compress(keypoints, conditions))
@@ -217,10 +206,18 @@ def main():
             if num_frame % fps == 0:
                 face_detections = face_detector.detect(frame)
 
-            meta_data = {'cctv_id': cctv_info['cctv_id'], 'current_datetime': current_datetime, 'fps': int(fps), 'timestamp': timestamp,
-                         'cctv_name': cctv_info['cctv_name'], 'num_frame':num_frame, 'frame_size': (int(w), int(h))} 
+            meta_data = {'cctv_id': cctv_info['cctv_id'],
+                        'cctv_name': cctv_info['cctv_name'],
+                        'cctv_ip': cctv_info['cctv_ip'],
+                        'location_id': cctv_info['location_id'],
+                        'location_name': cctv_info['location_name'],
+                        'current_datetime': current_datetime,
+                        'timestamp': timestamp,
+                        'fps': int(fps),
+                        'num_frame':num_frame,
+                        'frame':frame,
+                        'frame_size': (int(w), int(h))} 
 
-            # if debug_args.visualize: # TODO 시각화 코드를 따로 빼내야함
             for i, track in enumerate(tracks):
                 skeletons = track.skeletons
                 detection = track.tlbr
@@ -228,12 +225,11 @@ def main():
                 v_frame = draw_bbox_skeleton.draw(v_frame, tid, detection, skeletons[-1])
             meta_data['v_frame'] = v_frame
 
-            combine_data = None # TODO 더미 데이터 넣을 것
-            emotion_interval = fps * 3  # 따로 파라미터로 빼던가 해야함  TODO
-            if debug_args.debug == False:  # 디버그에서도 지원하도록 해야함 TODO
-                if num_frame % emotion_interval == 0:
-                    combine_data, thermal_data, rader_data, overlay_image = sensor.get_data(frame, tracks, face_detections)
-                    logger.info(combine_data)
+            combine_data = None
+            emotion_interval = fps * 3
+            if num_frame % emotion_interval == 0:
+                combine_data, thermal_data, rader_data, overlay_image = sensor.get_data(frame, tracks, face_detections)
+                logger.info(combine_data)
                            
             # 모듈로 데이터 전송
             if 'selfharm' in args.modules and 0 < scale_args.selfharm:
@@ -251,6 +247,7 @@ def main():
     if debug_args.visualize:
         out.release()
     cap.release()
+
     logger.warning("Main process end.")
 
 if __name__ == '__main__':
