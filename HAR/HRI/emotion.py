@@ -100,13 +100,12 @@ def Emotion(data_pipe, event_pipe):
                         cctv_id = meta_data['cctv_id']
 
                         file_name = f"{tid}.jpg"
-                        # cv2.imwrite(f"{snapshot_path}/{file_name}", face_img) #TODO TEMP
                         file_name = f"{cctv_id}/{file_name}"
 
                         combine_result_data = {'tid': tid, 'temperature': None, 'breath': None, 'heart': None}
-                        # for i in range(len(combine_data)):
-                        #     if combine_data[i]['tid'] == tid:
-                        #         combine_result_data = combine_data[i]
+                        for i in range(len(combine_data)):
+                            if combine_data[i]['tid'] == tid:
+                                combine_result_data = combine_data[i]
 
                         try:
                             emotion_index = map_emotion_to_index(emotion)

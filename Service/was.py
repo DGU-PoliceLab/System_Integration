@@ -1,6 +1,10 @@
 import requests
 import json
 import time
+import warnings
+from urllib3.exceptions import InsecureRequestWarning
+
+warnings.filterwarnings("ignore", category=InsecureRequestWarning)
 
 # ENDPOINT = "https://was:40000"
 ENDPOINT = "https://host.docker.internal:40000" #컨테이너가 아닌 로컬에서 WAS 실행시

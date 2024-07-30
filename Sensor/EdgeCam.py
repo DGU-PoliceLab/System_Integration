@@ -5,11 +5,11 @@ class EdgeCam:
     def __init__(self, thermal_ip = None, thermal_port = None, rader_ip = None, rader_port = None, debug_args = None):
         self.logger = get_logger(name= '[EdgeCam]', console= True, file= False)
         self.logger.info(f"thermal: {thermal_ip}:{thermal_port}, rader: {rader_ip}:{rader_port}")
-        if thermal_ip:
+        if thermal_ip is not None:
             self.thermal = thermal.Thermal(thermal_ip, thermal_port, debug_args)  
         else:
             self.thermal = None
-        if rader_ip:
+        if rader_ip is not None:
             self.rader = rader.Rader(rader_ip, rader_port, debug_args)
         else:  
             self.rader = None

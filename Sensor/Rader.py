@@ -10,12 +10,11 @@ class Rader:
         self.port = port
         self.sock = None
         self.buffer_size = 144  # 기본 패킷 크기 설정, 필요 시 조정 가능
-        self.logger = get_logger(name='[RADER]', console=True, file=False)
+        self.logger = get_logger(name='[RADER]', console=False, file=False)
     
     def connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.ip, self.port))
-        print((self.ip, self.port))
         self.logger.info(f"Connect to rader({self.ip}:{self.port})")
 
     def disconnect(self):
@@ -190,7 +189,7 @@ class Rader:
                 if data_counter == 12:
                     break
 
-                # 주기적으로 결과 출력
+                # # 주기적으로 결과 출력
                 # if data_counter % 10 == 0:
                 #     print(f"Intermediate result after {data_counter} packets: {result}")
 
@@ -199,8 +198,8 @@ class Rader:
 
         except Exception as e:
             self.logger.debug(f"Error occurred in rader: {e}")
-            # import traceback
-            # print(traceback.format_exc())
+            import traceback
+            print(traceback.format_exc())
             return result 
 
     def recv_all(self, length):

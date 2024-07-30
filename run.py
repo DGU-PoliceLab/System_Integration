@@ -24,9 +24,9 @@ from HAR.PLASS.selfharm import Selfharm
 from HAR.CSDC.falldown import Falldown
 from HAR.HRI.emotion import Emotion
 from HAR.MHNCITY.violence.violence import Violence
+from Event.handler import update
 from variable import get_root_args, get_sort_args, get_scale_args, get_debug_args, get_rader_args, get_thermal_args
 import PoseEstimation.mmlab.rtmo as rtmo
-from Event.handler import *
 
 def main():
     # 출력 로그 설정
@@ -110,6 +110,8 @@ def main():
 
     # 센서 관련 설정
     sensor = EdgeCam(cctv_info['thermal_ip'], cctv_info['thermal_port'], cctv_info['rader_ip'], cctv_info['rader_port'], debug_args=debug_args)
+    sensor.connect_rader()
+    sensor.connect_thermal()
 
     # 동영상 관련 설정
     from datetime import datetime
@@ -247,6 +249,8 @@ def main():
     if debug_args.visualize:
         out.release()
     cap.release()
+    sensor.disconnect_rader()
+    sensor.disconnect_thermal()
 
     logger.warning("Main process end.")
 

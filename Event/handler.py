@@ -52,7 +52,6 @@ def update(pipe):
             else:
                 targetData = []
                 for td in event['combine_list']:
-                    print("1 >>>", td['combine_dict']['heart'], td['combine_dict']['breath'])
                     if td['combine_dict']['heart'] == None:
                         heart = 0
                     else:
@@ -65,8 +64,6 @@ def update(pipe):
                         bbox = [100, 100, 200, 200]
                     else:
                         bbox = td['bbox']
-                    print("2 >>>", heart, breath)
-                    print("----------------------------------------------------------------------------")
                     thumb = extract_face(event['meta_data']['frame'], bbox)
                     form = {
                         "tid": td['id'],
@@ -76,7 +73,6 @@ def update(pipe):
                         "temp": 32.5,
                         "emotion": td['emotion_index']}
                     targetData.append(form)
-                print("==============================================================================")
                 updateSnap(event['meta_data']['location_name'], targetData)
         else:
             time.sleep(0.0001)
