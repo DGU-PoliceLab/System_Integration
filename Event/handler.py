@@ -2,53 +2,50 @@ from Service.was import sendMessage, updateSnap
 from Utils.snap import extract_face
 from variable import get_arg
 import copy
+import time
+from datetime import datetime
 
-LAST_EVENT_TIME = {"falldown": None, "selfharm": None, "longterm_status": None, "violence": None}
-DELAY_TIME = get_arg('root', 'event_delay')
+DELAY = 15
+
+def check_time_gap(pre):
+    now = datetime.now()
+    gap = now - pre
+    gap_seconds = gap.seconds
+    if gap_seconds > DELAY:
+        return True
+    else:
+        return False
+
+
 
 def update(pipe): 
-    def str_to_second(time_str):
-        tl = list(map(int, time_str.split(":")))
-        tn = tl[0] * 3600 + tl[1] * 60 + tl[2]
-        return tn
-
-    def check(event, cur_time):
-        last_time = LAST_EVENT_TIME[event]
-        if last_time == None:
-            return True
-        else:
-            diff = cur_time - last_time
-            if diff > DELAY_TIME:
-                return True
-            else:
-                return False
-    
+    last_occured = {"violence": None, "selfharm": None, "falldown": None, "longterm_status": None}
     while True:
         event = pipe.recv()
         if event is not None:
-            current_datetime = event["meta_data"]["current_datetime"]
-            if event['action'] != "emotion":   
-                event_type = event['action']
-                event_time = copy.deepcopy(str(current_datetime)[11:19])            
-                event_cur_time = str_to_second(event_time) # event insert delay code use here
-                if check(event_type, event_cur_time): # event insert delay code use here
-                    LAST_EVENT_TIME[event['action']] = event_cur_time
-
-                    if event['action'] == "selfharm":
-                        action = "자해"
-                    elif event['action'] == "falldown":
-                        action = "낙상"
-                    elif event['action'] == "emotion":
-                        action = "감정"
-                    elif event['action'] == "longterm_status":
-                        action = "장시간 고정 자세"
-                    elif event['action'] == "violence":
-                        action = "폭행"
-
             if event['action'] != "emotion":
-                import time
+            
+                current_datetime = event["meta_data"]["current_datetime"]
                 target = event["meta_data"]["location_name"]
-                # sendMessage(target, action, current_datetime)
+
+                if event['action'] == "selfharm":
+                    action = "자해"
+                elif event['action'] == "falldown":
+                    action = "낙상"
+                elif event['action'] == "emotion":
+                    action = "감정"
+                elif event['action'] == "longterm_status":
+                    action = "장시간 고정 자세"
+                elif event['action'] == "violence":
+                    action = "폭행"
+                if last_occured[event['action']] == None:
+                    last_occured[event['action']] = datetime.now()
+                    sendMessage(target, action, current_datetime)
+                else:
+                    if check_time_gap(last_occured[event['action']]):
+                        last_occured[event['action']] = datetime.now()
+                        sendMessage(target, action, current_datetime)
+                        
             else:
                 targetData = []
                 for td in event['combine_list']:

@@ -194,12 +194,8 @@ def main():
                 for p in pred:
                     keypoints = p['keypoints']
                     keypoints_scores = p['keypoint_scores']
-                    detection = [*p['bbox'][0], p['bbox_score']]             
-                    conditions = [(x < 0 or y < 0) for x, y in keypoints]
-                    from itertools import compress
-                    invalid_skeletons = list(compress(keypoints, conditions))
-                    if invalid_skeletons:
-                        continue
+                    detection = [*p['bbox'][0], p['bbox_score']]        
+                    
                     detections.append(detection)
                     skeletons.append([a + [b] for a, b in zip(keypoints, keypoints_scores)])
             detections = np.array(detections, dtype=np.float32)
@@ -216,16 +212,16 @@ def main():
                         'current_datetime': current_datetime,
                         'timestamp': timestamp,
                         'fps': int(fps),
-                        'num_frame':num_frame,
-                        'frame':frame,
+                        'num_frame':num_frame,                       
                         'frame_size': (int(w), int(h))} 
 
-            for i, track in enumerate(tracks):
-                skeletons = track.skeletons
-                detection = track.tlbr
-                tid = track.track_id
-                v_frame = draw_bbox_skeleton.draw(v_frame, tid, detection, skeletons[-1])
-            meta_data['v_frame'] = v_frame
+            if debug_args.visualize:
+                for i, track in enumerate(tracks):
+                    skeletons = track.skeletons
+                    detection = track.tlbr
+                    tid = track.track_id
+                    v_frame = draw_bbox_skeleton.draw(v_frame, tid, detection, skeletons[-1])
+                meta_data['v_frame'] = v_frame
 
             combine_data = None
             emotion_interval = fps * 3
@@ -240,9 +236,13 @@ def main():
                 falldown_pipe_list[num_frame % scale_args.falldown][0].send([tracks, meta_data])
             if num_frame % emotion_interval == 0:
                 if 'emotion' in args.modules and 0 < scale_args.emotion:
+                    meta_data['frame']= frame
                     emotion_pipe_list[num_frame % scale_args.emotion][0].send([tracks, meta_data, face_detections, frame, combine_data])
-            if 'violence' in args.modules and 0 < scale_args.violence:
-                violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])                            
+            
+            if num_frame % emotion_interval == 0:
+                print(combine_data)
+                if 'violence' in args.modules and 0 < scale_args.violence:
+                    violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data, combine_data])                            
             num_frame += 1
         else:
             break

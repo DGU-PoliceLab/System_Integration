@@ -23,8 +23,8 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def check_violence(confidence, threshhold):
-    if threshhold < confidence:
+def check_violence(confidence, threshhold, num_detected_people):
+    if threshhold < confidence and num_detected_people > 1:
         return True
     return False   
 
@@ -59,17 +59,14 @@ def Violence(data_pipe, event_pipe):
     seq=0
     ort_session_270 = onnxruntime.InferenceSession("/System_Integration/HAR/MHNCITY/violence/models/model_gcn270.onnx")
     ort_session_397 = onnxruntime.InferenceSession("/System_Integration/HAR/MHNCITY/violence/models/model_gcn397.onnx")
-    # print(ort_session_270.get_inputs()[0].name)
-    # print(ort_session.get_inputs())
     ort_270_inputs = ort_session_270.get_inputs()[0].name
     ort_270_outputs = ort_session_270.get_outputs()[0].name
-    # print(ort_session_397.get_inputs()[0].name)
-    # print(ort_session.get_inputs())
     ort_397_inputs = ort_session_397.get_inputs()[0].name
     ort_397_outputs = ort_session_397.get_outputs()[0].name
 
     all_batch_keypoints = []
     current_batch_keypoints = []
+    distances = []
     current_frame_count = 0
     data_pipe.send(True)
 
@@ -79,8 +76,6 @@ def Violence(data_pipe, event_pipe):
             init_flag = True
 
     while True:
-        # import time
-        # start = time.time()
         data = data_pipe.recv()
         if data:
             if data == "end_flag":
@@ -88,7 +83,7 @@ def Violence(data_pipe, event_pipe):
                 if debug_args.visualize:    
                     visualizer.merge_img_to_video()
                 break
-            tracks, meta_data = data
+            tracks, meta_data, combine_data = data
             frame_skeletons = []
             current_frame_count += 1
             num_detected_people = len(tracks)
@@ -103,7 +98,6 @@ def Violence(data_pipe, event_pipe):
                     skeletons[:, :2]
                     
                     frame_skeletons.append(np.array(skeletons[:, :2]))
-
                     for _ in range(args.num_persons - num_detected_people):
                         frame_skeletons.append(np.zeros((args.num_keypoints, 2)))
             else:
@@ -121,40 +115,22 @@ def Violence(data_pipe, event_pipe):
                 current_batch_keypoints = []
                 current_frame_count = 0
             if len(all_batch_keypoints) == args.window_size:
-                # 피클따기
-                # with open("policelab_violence_data.pickle", "wb") as fw:
-                #             pickle.dump(all_batch_keypoints, fw)
                 seq+=1
 
                 all_batch_keypoints = np.array(all_batch_keypoints, dtype=np.float32)
-                ort_270outs = ort_session_270.run([ort_270_outputs], {ort_270_inputs : all_batch_keypoints})
-                # print("---------------------------------------------")
-                # print(f"현재 seqence : {seq}")
-                # print(f"seqence {seq} --- 270 out MAX")
-                # print(f"ort_270outs : {ort_270outs}")
-                # print(f"270 : {round(np.max(ort_270outs), 9)}")
+
                 
                 ort_397outs = ort_session_397.run([ort_397_outputs], {ort_397_inputs : all_batch_keypoints})
-                # print("397 out")
-                # print(f"ort_397outs : {ort_397outs}")
-                # print(f"seqence {seq} --- 397 out MAX")
-                # print(f"397 : {round(np.max(ort_397outs), 9)}")
 
-                # print("---------------------------------------------")
-                # 여기가 폭행 모델의 전처리된 최종 input 값이 들어가는 곳 (all_batch_keypoints)
-                max_score_1 = np.max(ort_270outs)
-                max_score_2 = np.max(ort_397outs) # 이 값을 사용해야 됨.
-                mean_score_1 = np.mean(ort_270outs)
-                mean_score_2 = np.mean(ort_397outs)
-                # mean_avg_score = adjust_mean(max_score_1, max_score_2)
-                # logger.info(f"mean_avg_score : {max_score_2}")
+                mean_score_2 = np.mean(ort_397outs) # 이 값을 사용해야 됨.
 
-                confidence = max_score_2
-                if check_violence(confidence=max_score_2, threshhold=args.threshhold):
+                confidence = mean_score_2
+                if check_violence(confidence=mean_score_2, threshhold=args.threshhold, num_detected_people=num_detected_people):
                     action_name = 'violence'
                     tid = 1
-                    logger.info(f"action: violence {meta_data['num_frame']}")
+                    logger.info(f"action: violence {meta_data['num_frame']}, 폭행 확률 : {mean_score_2}, 사람 수 : {num_detected_people}")
                     event_pipe.send({'action': "violence", 'id':tid, 'meta_data': meta_data})
+            
                 all_batch_keypoints = []
 
             if debug_args.visualize:
@@ -165,8 +141,5 @@ def Violence(data_pipe, event_pipe):
                     visualizer.save_temp_image([meta_data["v_frame"], action_name, confidence], meta_data["num_frame"], color="red")
                 else:
                     visualizer.save_temp_image([meta_data["v_frame"], action_name, confidence], meta_data["num_frame"])
-            # logger.info(f"time : {round(time.time() - start, 6)}")
         else:
             time.sleep(0.0001)
-            
-        

@@ -63,13 +63,18 @@ def inference(model, label_map, pose_data, meta_data, pipe, logger):
         action_label = label_map[max_pred_index]
         # 가장 높은 예측값을 가진 행동의 예측값 가저오기
         confidence = result.pred_score[max_pred_index]
-        logger.debug(f"action: {action_label}")
+        logger.debug(f"action: {action_label}, confidence: {confidence}")
         # 행동 라벨이 selfharm(normal이 아닌값)의 예측값이 0.85 초과거나 normal의 예측갑이 0.3미만일 때 selfharm으로 처리
-        if (action_label != 'normal' and confidence > 0.85) or (action_label == 'normal' and confidence < 0.3):
-            logger.debug("selfharm", confidence)
-            logger.debug(result.pred_score)
-            logger.info(f"selfharm detected! {meta_data[-1]['current_datetime']}")
-            pipe.send({'action': "selfharm", 'id':tid, 'meta_data': meta_data})
+        if (action_label != 'normal' and action_label != "hittingbody" and confidence > 0.9) or (action_label == 'normal' and confidence < 0.1):
+            if (action_label == 'choking_hand' or action_label == 'choking_cloth') and confidence > 0.9:
+                logger.info(f"action: selfharm, confidence: {confidence}")
+                pipe.send({'action': "selfharm", 'id':tid, 'meta_data': meta_data[-1]}) # TODO meta_data가 리스트임. 수정요망
+            elif (action_label == 'normal' and confidence < 0.1):
+                logger.info(f"action: selfharm, confidence: {confidence}")
+                pipe.send({'action': "selfharm", 'id':tid, 'meta_data': meta_data[-1]}) # TODO meta_data가 리스트임. 수정요망
+            elif (confidence > 0.95):
+                logger.info(f"action: selfharm, confidence: {confidence}")
+                pipe.send({'action': "selfharm", 'id':tid, 'meta_data': meta_data[-1]}) # TODO meta_data가 리스트임. 수정요망
 
         EVENT = [action_label, confidence]
     except Exception as e:
@@ -77,7 +82,7 @@ def inference(model, label_map, pose_data, meta_data, pipe, logger):
 
 def Selfharm(data_pipe, event_pipe):
     global EVENT
-    logger = get_logger(name="[PLASS]", console=False, file=False)
+    logger = get_logger(name="[PLASS]", console=True, file=False)
     args = get_selfharm_args()
     debug_args = get_debug_args()
     if debug_args.visualize:
@@ -130,6 +135,7 @@ def Selfharm(data_pipe, event_pipe):
                 prev_data = data
                 # 새로운 데이터 전처리
                 pose_data = pre_processing(tracks)
+
 
                 # 사람이 있는 경우 데이터 모으기
                 if len(tracks) > 0:

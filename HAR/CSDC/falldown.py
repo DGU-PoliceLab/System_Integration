@@ -17,13 +17,15 @@ def preprocess(skeletons, frame_step):
 
     return np.array(skeletons)
 
-MAX_LEN = 7
-N = 4
-THRESHOLD = 0.58
+MAX_LEN = 24
+N = 14
+THRESHOLD = 0.70
 event_deque = deque(maxlen=MAX_LEN)
 def check_event(action_name='Normal', confidence=0, threshold=0.6):
     
-    if action_name == 'Fall Down' and THRESHOLD < confidence:
+    if action_name == 'Fall Down' and 0.88 < confidence:
+        event_deque.append('Normal')
+    elif action_name == 'Fall Down' and THRESHOLD < confidence:
         event_deque.append('Fall Down')
     else:
         event_deque.append('Normal')
@@ -84,7 +86,6 @@ def check_longterm(tracks, meta_data):
     for i, c in enumerate(count):
         if c > HOLD_TIME * FPS:
             event[0] = 'longterm(detect)'
-            # logger.info(f"action: longterm, tid: {i}")
             count[i] = 0
             is_longterm_check = False #롱텀 체크 종료 조건이 롱텀 발생밖에 없음. TODO 버그
             return True

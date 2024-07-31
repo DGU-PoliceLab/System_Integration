@@ -143,7 +143,7 @@ class Rader:
                 for track_id, pos_x, pos_y in tracks:
                     if -200 <= pos_x <= 200 and 0 <= pos_y <= 200:
                         conv_pos_x = (pos_x + 200) / 400 * w
-                        conv_pos_y = (pos_y + 200) / 400 * h
+                        conv_pos_y = pos_y / 10.0
                         track_info[track_id] = {"track_id": track_id, "pos_x": conv_pos_x, "pos_y": conv_pos_y}
                         # print(f"Track Data: ID={track_id}, X={pos_x}, Y={pos_y}")
                         self.logger.info(f"TRACK: {track_info}")

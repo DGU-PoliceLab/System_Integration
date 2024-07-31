@@ -3,7 +3,7 @@ from Sensor import rader, thermal, cctv
 
 class EdgeCam:
     def __init__(self, thermal_ip = None, thermal_port = None, rader_ip = None, rader_port = None, debug_args = None):
-        self.logger = get_logger(name= '[EdgeCam]', console= True, file= False)
+        self.logger = get_logger(name= '[EdgeCam]', console= False, file= False)
         self.logger.info(f"thermal: {thermal_ip}:{thermal_port}, rader: {rader_ip}:{rader_port}")
         if thermal_ip is not None:
             self.thermal = thermal.Thermal(thermal_ip, thermal_port, debug_args)  
@@ -58,20 +58,21 @@ class EdgeCam:
                     rd['score'] = abs((x1 + x2) / 2 - pos[0])
                     r_temp.append(rd)
             r_temp.sort(key= lambda x: x['score'])
-            collect = {'tid': tid, 'temperature': None, 'breath': None, 'heart': None}
-
-            # if len(t_temp) > 0 and tid == t_temp[0]['id']:
-            #     collect['temperature'] = td['temp']
-            # if collect['temperature'] != None and collect['temperature'] != 0:
-            #     self.data[tid]['temperature'] = collect['temperaturWSe']
+            collect = {'tid': tid, 'temperature': None, 'breath': None, 'heart': None, 'r_x': None, 'r_y': None}
 
             if len(r_temp) > 0 and tid == r_temp[0]['id']:
                 collect['breath'] = rd['breath']
-                collect['heart'] = rd['heart']                 
+                collect['heart'] = rd['heart']     
+                collect['r_x'] = rd['pos'][0]           
+                collect['r_y'] = rd['pos'][1]           
             if collect['breath'] != None and collect['breath'] != 0:
                 self.data[tid]['breath'] = collect['breath']
             if collect['heart'] != None and collect['heart'] != 0:
                 self.data[tid]['heart'] = collect['heart']
+            if collect['r_x'] != None and collect['r_x'] != 0:
+                self.data[tid]['r_x'] = collect['r_x']
+            if collect['r_y'] != None and collect['r_y'] != 0:
+                self.data[tid]['r_y'] = collect['r_y']
             result.append(self.data[tid])
             self.logger.info(f"{result}")
             
