@@ -46,6 +46,8 @@ def readActiveCctvList(debug):
                 cctv_info['thermal_port'] = row[7]
                 cctv_info['rader_ip'] = row[8]
                 cctv_info['rader_port'] = row[9]
+                cctv_info['toilet_rader_ip'] = row[10]
+                cctv_info['toilet_rader_port'] = row[11]
                 cctv_data.append(cctv_info)
             return cctv_data
     except Exception as e:

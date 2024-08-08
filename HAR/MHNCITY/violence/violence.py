@@ -23,10 +23,29 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def check_violence(confidence, threshhold, num_detected_people):
-    if threshhold < confidence and num_detected_people > 1:
+MAX_LEN = 300
+N = 10
+THRESHOLD = 0.2
+event_deque = deque(maxlen=MAX_LEN)
+def check_violence(confidence=0, num_detected_people=0):
+    if num_detected_people < 2:
+        return False
+    
+    if 0.95 < confidence:
+        event_deque.append('normal')
+    elif THRESHOLD < confidence:
+        event_deque.append('violence')
+    else:
+        event_deque.append('normal')
+
+    conter = 0
+    for evt in event_deque:
+        if evt == "violence":
+            conter += 1    
+    if N <= conter:
+        event_deque.clear()
         return True
-    return False   
+    return False
 
 def adjust_max(max_score_1, max_score_2):
     score_gap = abs(max_score_1 - max_score_2)
@@ -51,7 +70,7 @@ def pad_keypoints(keypoints, num_persons, num_keypoints):
     return keypoints[:num_persons, :num_keypoints, :2]  # Select first 'num_persons' and 'num_keypoints'
 
 def Violence(data_pipe, event_pipe):
-    logger = get_logger(name="[MhnCity.Violence]", console=True, file=False)
+    logger = get_logger(name="[MhnCity.Violence]", console=False, file=False)
     args = parse_args()
     from variable import get_debug_args
     debug_args = get_debug_args()
@@ -76,70 +95,70 @@ def Violence(data_pipe, event_pipe):
             init_flag = True
 
     while True:
-        data = data_pipe.recv()
-        if data:
-            if data == "end_flag":
-                logger.warning("Violence process end.")
-                if debug_args.visualize:    
-                    visualizer.merge_img_to_video()
-                break
-            tracks, meta_data, combine_data = data
-            frame_skeletons = []
-            current_frame_count += 1
-            num_detected_people = len(tracks)
+        try:
+            data = data_pipe.recv()
+            if data:
+                if data == "end_flag":
+                    logger.warning("Violence process end.")
+                    if debug_args.visualize:    
+                        visualizer.merge_img_to_video()
+                    break
+                tracks, meta_data = data
+                frame_skeletons = []
+                current_frame_count += 1
+                num_detected_people = len(tracks)
 
-            action_name = 'normal' #TODO 2번 정의함
-            confidence = 0          #TODO 2번 정의함
-            if num_detected_people:
-                for i, track in enumerate(tracks):
-                    skeletons = track.skeletons[-1]
+                action_name = 'normal'
+                confidence = 0
+                if num_detected_people:
+                    for i, track in enumerate(tracks):
+                        skeletons = track.skeletons[-1]
 
-                    tid = track.track_id
-                    skeletons[:, :2]
-                    
-                    frame_skeletons.append(np.array(skeletons[:, :2]))
-                    for _ in range(args.num_persons - num_detected_people):
-                        frame_skeletons.append(np.zeros((args.num_keypoints, 2)))
-            else:
-                # No person detected, pad with zeros for all
-                for _ in range(args.num_persons):
-                    frame_skeletons.append(np.zeros((args.num_keypoints, 2)))
-            
-            frame_skeletons = np.array(frame_skeletons)
-            
-            padded_keypoints = pad_keypoints(frame_skeletons, args.num_persons, args.num_keypoints)  # args.num_persons, args.num_keypoints로 수정
-            current_batch_keypoints.append(padded_keypoints)
-            if current_frame_count == args.num_frames:  
-                all_batch_keypoints.append(current_batch_keypoints)             
-                
-                current_batch_keypoints = []
-                current_frame_count = 0
-            if len(all_batch_keypoints) == args.window_size:
-                seq+=1
-
-                all_batch_keypoints = np.array(all_batch_keypoints, dtype=np.float32)
-
-                
-                ort_397outs = ort_session_397.run([ort_397_outputs], {ort_397_inputs : all_batch_keypoints})
-
-                mean_score_2 = np.mean(ort_397outs) # 이 값을 사용해야 됨.
-
-                confidence = mean_score_2
-                if check_violence(confidence=mean_score_2, threshhold=args.threshhold, num_detected_people=num_detected_people):
-                    action_name = 'violence'
-                    tid = 1
-                    logger.info(f"action: violence {meta_data['num_frame']}, 폭행 확률 : {mean_score_2}, 사람 수 : {num_detected_people}")
-                    event_pipe.send({'action': "violence", 'id':tid, 'meta_data': meta_data})
-            
-                all_batch_keypoints = []
-
-            if debug_args.visualize:
-                if init_flag == True:
-                    visualizer.mkdir(meta_data['timestamp'])
-                    init_flag = False
-                if action_name == 'violence':
-                    visualizer.save_temp_image([meta_data["v_frame"], action_name, confidence], meta_data["num_frame"], color="red")
+                        tid = track.track_id
+                        skeletons[:, :2]
+                        
+                        frame_skeletons.append(np.array(skeletons[:, :2]))
+                        for _ in range(args.num_persons - num_detected_people):
+                            frame_skeletons.append(np.zeros((args.num_keypoints, 2)))
                 else:
-                    visualizer.save_temp_image([meta_data["v_frame"], action_name, confidence], meta_data["num_frame"])
-        else:
+                    # No person detected, pad with zeros for all
+                    for _ in range(args.num_persons):
+                        frame_skeletons.append(np.zeros((args.num_keypoints, 2)))
+                
+                frame_skeletons = np.array(frame_skeletons)
+                
+                padded_keypoints = pad_keypoints(frame_skeletons, args.num_persons, args.num_keypoints)  # args.num_persons, args.num_keypoints로 수정
+                current_batch_keypoints.append(padded_keypoints)
+                if current_frame_count == args.num_frames:  
+                    all_batch_keypoints.append(current_batch_keypoints)             
+                    
+                    current_batch_keypoints = []
+                    current_frame_count = 0
+                if len(all_batch_keypoints) == args.window_size:
+                    seq+=1
+                    all_batch_keypoints = np.array(all_batch_keypoints, dtype=np.float32)                
+                    ort_397outs = ort_session_397.run([ort_397_outputs], {ort_397_inputs : all_batch_keypoints})
+                    mean_score_2 = np.mean(ort_397outs) # 이 값을 사용해야 됨.
+                    confidence = mean_score_2
+
+                    logger.info(f"action: {action_name} {meta_data['num_frame']}, 폭행 확률 : {mean_score_2}, 사람 수 : {num_detected_people}")
+
+                    if check_violence(confidence=mean_score_2, num_detected_people=num_detected_people):
+                        action_name = 'violence'
+                        logger.info(f"action: violence {meta_data['num_frame']}, 폭행 확률 : {mean_score_2}, 사람 수 : {num_detected_people}")
+                        event_pipe.send({'action': "violence", 'id':tid, 'meta_data': meta_data})            
+                    all_batch_keypoints = []
+
+                if debug_args.visualize:
+                    if init_flag == True:
+                        visualizer.mkdir(meta_data['timestamp'])
+                        init_flag = False
+                    if action_name == 'violence':
+                        visualizer.save_temp_image([meta_data["v_frame"], action_name, confidence], meta_data["num_frame"], color="red")
+                    else:
+                        visualizer.save_temp_image([meta_data["v_frame"], action_name, confidence], meta_data["num_frame"])
+            else:
+                time.sleep(0.0001)
+        except:
+            print("violence.py pipe 오류 발생")
             time.sleep(0.0001)

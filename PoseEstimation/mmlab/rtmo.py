@@ -3,7 +3,6 @@ sys.path.insert(0, "/System_Integration/PoseEstimation/")
 from argparse import ArgumentParser
 from typing import Dict
 import cv2
-import ffmpegcv
 from datetime import datetime
 from queue import Queue
 

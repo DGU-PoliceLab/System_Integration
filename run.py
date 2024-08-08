@@ -34,12 +34,9 @@ def main():
 
     # 루트 인자 및 기타 인자 설정
     args = get_root_args()
-    dict_args = vars(args)
     bot_sort_args = get_sort_args()
     bot_sort_args.ablation = False
     bot_sort_args.mot20 = not bot_sort_args.fuse_score
-    rader_args = get_rader_args()
-    thermal_args = get_thermal_args()
     debug_args = get_debug_args()
     scale_args = get_scale_args()
 
@@ -104,20 +101,26 @@ def main():
 
     # CCTV 정보 받아오기
     cctv_data = readActiveCctvList(debug_args.debug)
+    print(f"cctv_data: {cctv_data}")
     cctv_info = cctv_data[0]
     # logger 옵션 상관없이 출력
-    print(f"cctv_info >>> {cctv_info}")
+    # print(f"cctv_info >>> {cctv_info}")
 
     # 센서 관련 설정
-    sensor = EdgeCam(cctv_info['thermal_ip'], cctv_info['thermal_port'], cctv_info['rader_ip'], cctv_info['rader_port'], debug_args=debug_args)
+    sensor = EdgeCam(cctv_info['thermal_ip'], cctv_info['thermal_port'], cctv_info['rader_ip'], cctv_info['rader_port'], cctv_info['toilet_rader_ip'], cctv_info['toilet_rader_port'], debug_args=debug_args) # 원본
+    # sensor = EdgeCam(cctv_info['thermal_ip'], cctv_info['thermal_port'], "172.30.1.50", cctv_info['rader_port'], debug_args=debug_args)
+
     sensor.connect_rader()
+    sensor.connect_toilet_rader()
     sensor.connect_thermal()
 
     # 동영상 관련 설정
     from datetime import datetime
     now = datetime.now()
     timestamp = str(now).replace(" ", "").replace(":", "-").replace(".", "-")
-    cap = cv2.VideoCapture(cctv_info['cctv_ip'])
+    cap = cv2.VideoCapture(cctv_info['cctv_ip']) # 원본
+    # cap = cv2.VideoCapture("rtsp://admin:admin@172.30.1.30/stream1")
+
     fourcc = cv2.VideoWriter_fourcc('m','p','4','v')
     fps = 30
     num_frame = 0
@@ -176,82 +179,84 @@ def main():
     
     # 사람 감지 및 추적
     while cap.isOpened():
-        ret, frame = cap.read()
-        if ret:
-            v_frame = frame.copy()
-            current_datetime = datetime.now()
-            detections = []
-            skeletons = []
-            temp_call_args = copy.deepcopy(call_args)
-            temp_call_args['inputs'] = frame         
+        try:
+            ret, frame = cap.read()    
+            if ret:
+                # v_frame = frame.copy()
+                current_datetime = datetime.now()
+                detections = []
+                skeletons = []
+                temp_call_args = copy.deepcopy(call_args)
+                temp_call_args['inputs'] = frame         
 
-            for _ in inferencer(**temp_call_args):
-                pred = _['predictions'][0]
-                l_p = len(pred)
-                logger.info(f'frame #{num_frame} pose_results- {l_p} person detect!')
-                pred.sort(key = lambda x: x['bbox'][0][0])
+                for _ in inferencer(**temp_call_args):
+                    pred = _['predictions'][0]
+                    # logger.info(f'frame #{num_frame} pose_results- {l_p} person detect!')
+                    pred.sort(key = lambda x: x['bbox'][0][0])
 
-                for p in pred:
-                    keypoints = p['keypoints']
-                    keypoints_scores = p['keypoint_scores']
-                    detection = [*p['bbox'][0], p['bbox_score']]        
-                    
-                    detections.append(detection)
-                    skeletons.append([a + [b] for a, b in zip(keypoints, keypoints_scores)])
-            detections = np.array(detections, dtype=np.float32)
-            skeletons = np.array(skeletons, dtype=np.float32)
-            tracks = tracker.update(detections, skeletons, frame)
-            if num_frame % fps == 0:
-                face_detections = face_detector.detect(frame)
+                    for p in pred:
+                        keypoints = p['keypoints']
+                        keypoints_scores = p['keypoint_scores']
+                        detection = [*p['bbox'][0], p['bbox_score']]        
+                        detections.append(detection)
+                        skeletons.append([a + [b] for a, b in zip(keypoints, keypoints_scores)])
+                detections = np.array(detections, dtype=np.float32)
+                skeletons = np.array(skeletons, dtype=np.float32)
+                tracks = tracker.update(detections, skeletons, frame)
+                if num_frame % fps == 0:
+                    face_detections = face_detector.detect(frame)
 
-            meta_data = {'cctv_id': cctv_info['cctv_id'],
-                        'cctv_name': cctv_info['cctv_name'],
-                        'cctv_ip': cctv_info['cctv_ip'],
-                        'location_id': cctv_info['location_id'],
-                        'location_name': cctv_info['location_name'],
-                        'current_datetime': current_datetime,
-                        'timestamp': timestamp,
-                        'fps': int(fps),
-                        'num_frame':num_frame,                       
-                        'frame_size': (int(w), int(h))} 
+                meta_data = {'cctv_id': cctv_info['cctv_id'],
+                            'cctv_name': cctv_info['cctv_name'],
+                            'cctv_ip': cctv_info['cctv_ip'],
+                            'location_id': cctv_info['location_id'],
+                            'location_name': cctv_info['location_name'],
+                            'current_datetime': current_datetime,
+                            'timestamp': timestamp,
+                            'fps': int(fps),
+                            'num_frame':num_frame,                       
+                            'frame_size': (int(w), int(h))} 
 
-            if debug_args.visualize:
-                for i, track in enumerate(tracks):
-                    skeletons = track.skeletons
-                    detection = track.tlbr
-                    tid = track.track_id
-                    v_frame = draw_bbox_skeleton.draw(v_frame, tid, detection, skeletons[-1])
-                meta_data['v_frame'] = v_frame
+                # if debug_args.visualize:
+                #     for i, track in enumerate(tracks):
+                #         skeletons = track.skeletons
+                #         detection = track.tlbr
+                #         tid = track.track_id
+                #         v_frame = draw_bbox_skeleton.draw(v_frame, tid, detection, skeletons[-1])
+                #     meta_data['v_frame'] = v_frame
 
-            combine_data = None
-            emotion_interval = fps * 3
-            if num_frame % emotion_interval == 0:
-                combine_data, thermal_data, rader_data, overlay_image = sensor.get_data(frame, tracks, face_detections)
-                logger.info(combine_data)
-                           
-            # 모듈로 데이터 전송
-            if 'selfharm' in args.modules and 0 < scale_args.selfharm:
-                selfharm_pipe_list[num_frame % scale_args.selfharm][0].send([tracks, meta_data])
-            if 'falldown' in args.modules and 0 < scale_args.falldown:
-                falldown_pipe_list[num_frame % scale_args.falldown][0].send([tracks, meta_data])
-            if num_frame % emotion_interval == 0:
-                if 'emotion' in args.modules and 0 < scale_args.emotion:
-                    meta_data['frame']= frame
-                    emotion_pipe_list[num_frame % scale_args.emotion][0].send([tracks, meta_data, face_detections, frame, combine_data])
-            
-            if num_frame % emotion_interval == 0:
-                print(combine_data)
+                combine_data = None
+                emotion_interval = fps * 3
+                if num_frame % emotion_interval == 0:
+                    combine_data, thermal_data, rader_data, overlay_image = sensor.get_data(frame, tracks, face_detections)
+                    logger.info(combine_data)
+                            
+                # 모듈로 데이터 전송
+                if 'selfharm' in args.modules and 0 < scale_args.selfharm:
+                    selfharm_pipe_list[num_frame % scale_args.selfharm][0].send([tracks, meta_data])
+                if 'falldown' in args.modules and 0 < scale_args.falldown:
+                    falldown_pipe_list[num_frame % scale_args.falldown][0].send([tracks, meta_data])
+                if num_frame % emotion_interval == 0:
+                    if 'emotion' in args.modules and 0 < scale_args.emotion:
+                        meta_data['frame']= frame
+                        emotion_pipe_list[num_frame % scale_args.emotion][0].send([tracks, meta_data, face_detections, frame, combine_data])
                 if 'violence' in args.modules and 0 < scale_args.violence:
-                    violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data, combine_data])                            
-            num_frame += 1
-        else:
-            break
+                    violence_pipe_list[num_frame % scale_args.violence][0].send([tracks, meta_data])                            
+                num_frame += 1
+            else:
+                logger.warn("run.py, 프레임 받아오는 중 오류 발생, 일단 넘김")
+                cap = None
+                time.sleep(1)
+                cap = cv2.VideoCapture(cctv_info['cctv_ip'])
+        except Exception as e:
+            print(e)
+            time.sleep(10)
     if debug_args.visualize:
         out.release()
     cap.release()
     sensor.disconnect_rader()
+    sensor.disconnect_toilet_rader()
     sensor.disconnect_thermal()
-
     logger.warning("Main process end.")
 
 if __name__ == '__main__':

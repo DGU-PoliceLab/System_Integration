@@ -17,9 +17,9 @@ def preprocess(skeletons, frame_step):
 
     return np.array(skeletons)
 
-MAX_LEN = 40
+MAX_LEN = 24
 N = 24
-THRESHOLD = 0.72
+THRESHOLD = 0.7
 MAX_NORMAL_COUNT = 800
 event_deque = deque(maxlen=MAX_LEN)
 def check_event(action_name='Normal', confidence=0, threshold=0.6):
@@ -103,56 +103,60 @@ def Falldown(data_pipe, event_pipe):
     global is_longterm_check #나쁜구조 TODO
     normal_count = 0
     while True:
-        action_name = 'None'
-        confidence = 0
-        data = data_pipe.recv()
-        if data:
-            if data == "end_flag":
-                logger.warning("Falldown process end.")
-                if debug_args.visualize:    
-                    visualizer.merge_img_to_video()
-                break
-            tracks, meta_data = data
-
-            for i, track in enumerate(tracks):
-                skeletons = track.skeletons
-                if len(skeletons) < args.frame_step:
-                    continue
-
-                tid = track.track_id
-                skeletons = preprocess(skeletons=skeletons, frame_step=args.frame_step)
-
-                out = action_model.predict(skeletons, meta_data['frame_size'])
-                action_name = action_model.class_names[out[0].argmax()]
-                confidence = out[0][1]
-
-                if action_name == "Fall Down":
+        try:
+            action_name = 'None'
+            confidence = 0
+            data = data_pipe.recv()
+            if data:
+                if data == "end_flag":
+                    logger.warning("Falldown process end.")
+                    if debug_args.visualize:    
+                        visualizer.merge_img_to_video()
                     break
-            # if action_name == 'Fall Down':
-            #     logger.info(f"action: falldown, {confidence}  {meta_data['num_frame']}")
+                tracks, meta_data = data
 
-            # TODO 영상에서 낙상이 있으면 작동되게 구현되어 있음. 롱텀 제대로 구현하려면 낙상 이벤트가 id별로 관리되야함.
-            if check_event(action_name=action_name, confidence=confidence, threshold=args.threshhold):
-                event_pipe.send({'action': "falldown", 'id':tid, 'meta_data': meta_data})
-                logger.info(f"action: falldown, {confidence}  {meta_data['num_frame']}")
-                is_longterm_check = True
-                normal_count = 0
+                for i, track in enumerate(tracks):
+                    skeletons = track.skeletons
+                    if len(skeletons) < args.frame_step:
+                        continue
+
+                    tid = track.track_id
+                    skeletons = preprocess(skeletons=skeletons, frame_step=args.frame_step)
+
+                    out = action_model.predict(skeletons, meta_data['frame_size'])
+                    action_name = action_model.class_names[out[0].argmax()]
+                    confidence = out[0][1]
+
+                    if action_name == "Fall Down":
+                        break
+                if action_name == 'Fall Down':
+                    logger.info(f"action: falldown, {confidence}  {meta_data['num_frame']}")
+
+                # TODO 영상에서 낙상이 있으면 작동되게 구현되어 있음. 롱텀 제대로 구현하려면 낙상 이벤트가 id별로 관리되야함.
+                if check_event(action_name=action_name, confidence=confidence, threshold=args.threshhold):
+                    event_pipe.send({'action': "falldown", 'id':tid, 'meta_data': meta_data})
+                    logger.info(f"action: falldown, {confidence}  {meta_data['num_frame']}")
+                    is_longterm_check = True
+                    normal_count = 0
+                else:
+                    action_name = 'Normal' #TODO 임시. 그려지는 루틴이 분리가 안되서 임시 처리
+                    if MAX_NORMAL_COUNT <= normal_count:
+                        is_longterm_check = False
+                    normal_count += 1
+                    
+                if is_longterm_check:
+                    if check_longterm(tracks=tracks, meta_data=meta_data):
+                        event_pipe.send({'action': "longterm_status", 'id':tid, 'meta_data': meta_data})
+                        logger.info(f"action: longterm, {meta_data['num_frame']}")
+                        action_name = "longterm"
+
+                if debug_args.visualize:
+                    if init_flag == True:
+                        visualizer.mkdir(meta_data['timestamp'])
+                        init_flag = False
+                    visualizer.save_temp_image([meta_data["v_frame"], action_name, confidence], meta_data["num_frame"])
             else:
-                action_name = 'Normal' #TODO 임시. 그려지는 루틴이 분리가 안되서 임시 처리
-                if MAX_NORMAL_COUNT <= normal_count:
-                    is_longterm_check = False
-                normal_count += 1
-                
-            if is_longterm_check:
-                if check_longterm(tracks=tracks, meta_data=meta_data):
-                    event_pipe.send({'action': "longterm_status", 'id':tid, 'meta_data': meta_data})
-                    logger.info(f"action: longterm, {meta_data['num_frame']}")
-                    action_name = "longterm"
-
-            if debug_args.visualize:
-                if init_flag == True:
-                    visualizer.mkdir(meta_data['timestamp'])
-                    init_flag = False
-                visualizer.save_temp_image([meta_data["v_frame"], action_name, confidence], meta_data["num_frame"])
-        else:
+                time.sleep(0.0001)
+        except:
+            print("falldown.py pipe 오류 발생")
             time.sleep(0.0001)

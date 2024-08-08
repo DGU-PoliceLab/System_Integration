@@ -118,21 +118,21 @@ class Rader:
             while True:
                 header = self.sock.recv(4)
                 if not header:
-                    print("No header received, exiting loop")
+                    # print("No header received, exiting loop")
                     break
                 
                 if len(header) < 4:
-                    print("Incomplete header received, exiting loop")
+                    # print("Incomplete header received, exiting loop")
                     break
 
                 length = (header[2] << 8) | header[3]
                 if length <= 0 or length > 1024:  # 임의의 최대 길이 제한 설정
-                    print(f"Invalid length received: {length}, exiting loop")
+                    # print(f"Invalid length received: {length}, exiting loop")
                     break
 
                 data = header + self.sock.recv(length - 4)
                 if not data:
-                    print("No data received, exiting loop")
+                    # print("No data received, exiting loop")
                     break
 
                 tracks, vitals = self._parse_packet(data, data_counter)

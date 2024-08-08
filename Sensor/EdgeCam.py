@@ -2,7 +2,7 @@ from Utils.logger import get_logger
 from Sensor import rader, thermal, cctv
 
 class EdgeCam:
-    def __init__(self, thermal_ip = None, thermal_port = None, rader_ip = None, rader_port = None, debug_args = None):
+    def __init__(self, thermal_ip = None, thermal_port = None, rader_ip = None, rader_port = None, toilet_rader_ip = None, toilet_rader_port = None, debug_args = None):
         self.logger = get_logger(name= '[EdgeCam]', console= False, file= False)
         self.logger.info(f"thermal: {thermal_ip}:{thermal_port}, rader: {rader_ip}:{rader_port}")
         if thermal_ip is not None:
@@ -13,6 +13,10 @@ class EdgeCam:
             self.rader = rader.Rader(rader_ip, rader_port, debug_args)
         else:  
             self.rader = None
+        if toilet_rader_ip is not None:
+            self.toilet_rader = rader.Rader(toilet_rader_ip, toilet_rader_port, debug_args)
+        else:  
+            self.toilet_rader = None
         self.data = {}
 
     def connect_rader(self):
@@ -22,6 +26,14 @@ class EdgeCam:
     def disconnect_rader(self):
         if self.rader != None:
             self.rader.disconnect()
+
+    def connect_toilet_rader(self):
+        if self.toilet_rader != None:
+            self.toilet_rader.connect()
+
+    def disconnect_toilet_rader(self):
+        if self.toilet_rader != None:
+            self.toilet_rader.disconnect()
 
     def connect_thermal(self):
         if self.thermal != None:
@@ -42,6 +54,9 @@ class EdgeCam:
         if self.rader != None:
             rader_response = self.rader.receive(frame)
             self.logger.debug(rader_response)
+        if self.toilet_rader != None:
+            toilet_rader_response = self.toilet_rader.receive(frame)
+            self.logger.debug(toilet_rader_response)
         result = []
         for track in tracks:
             tid = track.track_id
@@ -75,6 +90,12 @@ class EdgeCam:
                 self.data[tid]['r_y'] = collect['r_y']
             result.append(self.data[tid])
             self.logger.info(f"{result}")
+        if len(toilet_rader_response) > 0:
+            toilet_data = {'tid': -1, 'breath': None, 'heart': None}
+            rd = toilet_rader_response[0]
+            toilet_data['breath'] = rd['breath']
+            toilet_data['heart'] = rd['heart'] 
+            result.append(toilet_data)
             
         return result, thermal_response, rader_response, overlay_image
 

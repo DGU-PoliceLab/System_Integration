@@ -13,7 +13,7 @@ class Thermal():
         self.port = port
         self.sock = None
         self.buffer_size = 160640
-        self.logger = get_logger(name= '[THERMAL]', console= True, file= False)
+        self.logger = get_logger(name= '[THERMAL]', console= False, file= False)
 
         self.info = dict()
         self.info['ip'] = debug_args.thermal_ip

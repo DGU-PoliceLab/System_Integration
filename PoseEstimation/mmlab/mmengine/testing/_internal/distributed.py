@@ -145,27 +145,31 @@ class MultiProcessTestCase(TestCase):
     @staticmethod
     def _event_listener(parent_pipe, signal_pipe, rank: int):
         while True:
-            ready_pipes = multiprocessing.connection.wait(
-                [parent_pipe, signal_pipe])
+            try:
+                ready_pipes = multiprocessing.connection.wait(
+                    [parent_pipe, signal_pipe])
 
-            if parent_pipe in ready_pipes:
+                if parent_pipe in ready_pipes:
 
-                if parent_pipe.closed:
+                    if parent_pipe.closed:
+                        return
+
+                    event = parent_pipe.recv()
+
+                    if event == MultiProcessTestCase.Event.GET_TRACEBACK:
+                        # Return traceback to the parent process.
+                        with tempfile.NamedTemporaryFile(mode='r+') as tmp_file:
+                            faulthandler.dump_traceback(tmp_file)
+                            # Flush buffers and seek to read from the beginning
+                            tmp_file.flush()
+                            tmp_file.seek(0)
+                            parent_pipe.send(tmp_file.read())
+
+                if signal_pipe in ready_pipes:
                     return
-
-                event = parent_pipe.recv()
-
-                if event == MultiProcessTestCase.Event.GET_TRACEBACK:
-                    # Return traceback to the parent process.
-                    with tempfile.NamedTemporaryFile(mode='r+') as tmp_file:
-                        faulthandler.dump_traceback(tmp_file)
-                        # Flush buffers and seek to read from the beginning
-                        tmp_file.flush()
-                        tmp_file.seek(0)
-                        parent_pipe.send(tmp_file.read())
-
-            if signal_pipe in ready_pipes:
-                return
+            except:
+                print("distributed.py pipe 오류 발생")
+                time.sleep(0.0001)
 
     @classmethod
     def _run(cls, rank: int, test_name: str, file_name: str,
